@@ -38,9 +38,9 @@ namespace TikzGraphGen.Visualization
 
         private ToolStripMenuItem InitializeFileOptions()
         {
-            ToolStripMenuItem file = new ToolStripMenuItem("&File");
+            ToolStripMenuItem file = new("&File");
 
-            ToolStripMenuItem init = new ToolStripMenuItem("New Project")
+            ToolStripMenuItem init = new("New Project")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.N,
                 ShowShortcutKeys = true
@@ -48,7 +48,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.NewProject();
             file.DropDownItems.Add(init);
                 
-            init = new ToolStripMenuItem("Open")
+            init = new("Open")
             {
                 ShortcutKeys = Keys.Control | Keys.O,
                 ShowShortcutKeys = true
@@ -56,10 +56,10 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.Open();
             file.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Open Recent");
+            init = new("Open Recent");
             file.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Save")
+            init = new("Save")
             {
                 ShortcutKeys = Keys.Control | Keys.S,
                 ShowShortcutKeys = true
@@ -67,7 +67,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.Save();
             file.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Save As")
+            init = new("Save As")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.S,
                 ShowShortcutKeys = true
@@ -75,7 +75,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.SaveAs();
             file.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Export")
+            init = new("Export")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.E,
                 ShowShortcutKeys = true
@@ -85,7 +85,7 @@ namespace TikzGraphGen.Visualization
 
             file.DropDownItems.Add(new ToolStripSeparator());
 
-            init = new ToolStripMenuItem("Graph Info") //Get number of vertices, edges, directed edges, faces, etc.
+            init = new("Graph Info") //Get number of vertices, edges, directed edges, faces, etc.
             {
                 ShortcutKeys = Keys.Control | Keys.I,
                 ShowShortcutKeys = true
@@ -95,7 +95,7 @@ namespace TikzGraphGen.Visualization
 
             file.DropDownItems.Add(new ToolStripSeparator());
 
-            init = new ToolStripMenuItem("Quit")
+            init = new("Quit")
             {
                 ShortcutKeys = Keys.Control | Keys.Alt | Keys.Q,
                 ShowShortcutKeys = true
@@ -108,9 +108,9 @@ namespace TikzGraphGen.Visualization
 
         private ToolStripMenuItem InitializeEditOptions()
         {
-            ToolStripMenuItem edit = new ToolStripMenuItem("&Edit");
+            ToolStripMenuItem edit = new("&Edit");
 
-            ToolStripMenuItem init = new ToolStripMenuItem("Undo")
+            ToolStripMenuItem init = new("Undo")
             {
                 ShortcutKeys = Keys.Control | Keys.Z,
                 ShowShortcutKeys = true
@@ -120,7 +120,7 @@ namespace TikzGraphGen.Visualization
             init.Enabled = false;
             edit.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Redo")
+            init = new("Redo")
             {
                 ShortcutKeys = Keys.Control | Keys.Y,
                 ShowShortcutKeys = true
@@ -130,13 +130,13 @@ namespace TikzGraphGen.Visualization
             init.Enabled = false;
             edit.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("View History");
+            init = new("View History");
             init.Click += (o, e) => _rsc.DisplayHistory();
             edit.DropDownItems.Add(init);
 
             edit.DropDownItems.Add(new ToolStripSeparator());
 
-            init = new ToolStripMenuItem("Cut")
+            init = new("Cut")
             {
                 ShortcutKeys = Keys.Control | Keys.X,
                 ShowShortcutKeys = true
@@ -144,7 +144,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.Cut();
             edit.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Copy")
+            init = new("Copy")
             {
                 ShortcutKeys = Keys.Control | Keys.C,
                 ShowShortcutKeys = true
@@ -152,7 +152,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.Copy();
             edit.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Paste")
+            init = new("Paste")
             {
                 ShortcutKeys = Keys.Control | Keys.V,
                 ShowShortcutKeys = true
@@ -162,11 +162,11 @@ namespace TikzGraphGen.Visualization
 
             edit.DropDownItems.Add(new ToolStripSeparator());
 
-            init = new ToolStripMenuItem("Resize");
+            init = new("Resize");
             init.Click += (o, e) => _rsc.ResizeAll();
             edit.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Set Units")
+            init = new("Set Units")
             {
                 ShortcutKeys = Keys.Control | Keys.Alt | Keys.U,
                 ShowShortcutKeys = true
@@ -174,7 +174,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.SetUnits();
             edit.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Font Options") //(include apply to all option)
+            init = new("Font Options") //(include apply to all option)
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.F,
                 ShowShortcutKeys = true
@@ -182,7 +182,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.FontOptions();
             edit.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Preferences")
+            init = new("Preferences")
             {
                 ShortcutKeys = Keys.Control | Keys.Alt | Keys.P,
                 ShowShortcutKeys = true
@@ -195,19 +195,19 @@ namespace TikzGraphGen.Visualization
 
         private ToolStripMenuItem InitializeViewOptions()
         {
-            ToolStripMenuItem view = new ToolStripMenuItem("&View");
+            ToolStripMenuItem view = new("&View");
 
-            ToolStripMenuItem init = new ToolStripMenuItem("Zoom In"); //TODO: Add ctrl + mouse^/v to MouseWheel event
+            ToolStripMenuItem init = new("Zoom In"); //TODO: Add ctrl + mouse^/v to MouseWheel event
             init.Click += (o, e) => _rsc.ZoomInc();
             view.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Zoom Out");
+            init = new("Zoom Out");
             init.Click += (o, e) => _rsc.ZoomDec();
             view.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Zoom Ratio");
+            init = new("Zoom Ratio");
             init.DropDownItems.AddRange(new ToolStripItem[] {
-                new ToolStripMenuItem("10%"),
+                new  ToolStripMenuItem("10%"),
                 new ToolStripMenuItem("25%"),
                 new ToolStripMenuItem("50%"),
                 new ToolStripMenuItem("75%"),
@@ -219,7 +219,7 @@ namespace TikzGraphGen.Visualization
             ((ToolStripMenuItem)init.DropDownItems[4]).Checked = true;
             view.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Zoom To Fit") //Make entire graph fit on screen (if possible)
+            init = new("Zoom To Fit") //Make entire graph fit on screen (if possible)
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.O,
                 ShowShortcutKeys = true
@@ -229,7 +229,7 @@ namespace TikzGraphGen.Visualization
 
             view.DropDownItems.Add(new ToolStripSeparator());
 
-            init = new ToolStripMenuItem("Page Border") //(create line showing page border + margin dimensions for PDF page)
+            init = new("Page Border") //(create line showing page border + margin dimensions for PDF page)
             {
                 ShortcutKeys = Keys.Control | Keys.B,
                 ShowShortcutKeys = true
@@ -237,7 +237,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.ToggleBorder();
             view.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Fullscreen")
+            init = new("Fullscreen")
             {
                 ShortcutKeys = Keys.F11,
                 ShowShortcutKeys = true
@@ -245,7 +245,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.ToggleFullscreen();
             view.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Snap To Unit") //(on by default, attempts to make new lines/vertices along increments (i.e. every new vertex is 10mm apart))
+            init = new("Snap To Unit") //(on by default, attempts to make new lines/vertices along increments (i.e. every new vertex is 10mm apart))
             {
                 ShortcutKeys = Keys.Control | Keys.U,
                 ShowShortcutKeys = true
@@ -253,7 +253,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.ToggleUnitSnap();
             view.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Show Unit Grid")
+            init = new("Show Unit Grid")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.U,
                 ShowShortcutKeys = true
@@ -263,7 +263,7 @@ namespace TikzGraphGen.Visualization
 
             view.DropDownItems.Add(new ToolStripSeparator());
 
-            init = new ToolStripMenuItem("Show Menubar")
+            init = new("Show Menubar")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.M,
                 ShowShortcutKeys = true
@@ -271,7 +271,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.ToggleMenu();
             view.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Show Toolbar")
+            init = new("Show Toolbar")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.T,
                 ShowShortcutKeys = true
@@ -284,8 +284,8 @@ namespace TikzGraphGen.Visualization
 
         private ToolStripMenuItem InitializeToolOptions()
         {
-            ToolStripMenuItem tool = new ToolStripMenuItem("&Tools");
-            ToolStripMenuItem init = new ToolStripMenuItem("Vertex")
+            ToolStripMenuItem tool = new("&Tools");
+            ToolStripMenuItem init = new("Vertex")
             {
                 ShortcutKeys = Keys.Control | Keys.K,
                 ShowShortcutKeys = true
@@ -304,7 +304,7 @@ namespace TikzGraphGen.Visualization
             ((ToolStripMenuItem)init.DropDownItems[0]).Checked = true;
             tool.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Edge")
+            init = new("Edge")
             {
                 ShortcutKeys = Keys.Control | Keys.G,
                 ShowShortcutKeys = true
@@ -322,7 +322,7 @@ namespace TikzGraphGen.Visualization
             ((ToolStripMenuItem)init.DropDownItems[0]).Checked = true;
             tool.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Edge Cap")
+            init = new("Edge Cap")
             {
                 ShortcutKeys = Keys.Control | Keys.H,
                 ShowShortcutKeys = true
@@ -339,7 +339,7 @@ namespace TikzGraphGen.Visualization
             ((ToolStripMenuItem)init.DropDownItems[2]).Checked = true;
             tool.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Label")
+            init = new("Label")
             {
                 ShortcutKeys = Keys.Control | Keys.L,
                 ShowShortcutKeys = true
@@ -358,7 +358,7 @@ namespace TikzGraphGen.Visualization
             init.ShowShortcutKeys = true;
             init.Click += (o, e) => _rsc.ToggleAngleSnap();
 
-            init = new ToolStripMenuItem("Transform") //TODO: Add shortcuts for transform subtools
+            init = new("Transform") //TODO: Add shortcuts for transform subtools
             {
                 ShortcutKeys = Keys.Control | Keys.N,
                 ShowShortcutKeys = true
@@ -375,7 +375,7 @@ namespace TikzGraphGen.Visualization
             ((ToolStripMenuItem)init.DropDownItems[4]).Checked = true;
             tool.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Select")
+            init = new("Select")
             {
                 ShortcutKeys = Keys.Control | Keys.E,
                 ShowShortcutKeys = true
@@ -383,7 +383,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Select;
             tool.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Area Select")
+            init = new("Area Select")
             {
                 ShortcutKeys = Keys.Control | Keys.A,
                 ShowShortcutKeys = true
@@ -391,7 +391,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.AreaSelect;
             tool.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Select All")
+            init = new("Select All")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.A,
                 ShowShortcutKeys = true
@@ -399,7 +399,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.SelectAll();
             tool.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Lasso")
+            init = new("Lasso")
             {
                 ShortcutKeys = Keys.Control | Keys.Q,
                 ShowShortcutKeys = true
@@ -407,7 +407,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Lasso;
             tool.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Weight")
+            init = new("Weight")
             {
                 ShortcutKeys = Keys.Control | Keys.W,
                 ShowShortcutKeys = true
@@ -423,7 +423,7 @@ namespace TikzGraphGen.Visualization
             ((ToolStripMenuItem)init.DropDownItems[0]).Checked = true;
             tool.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Tracker")
+            init = new("Tracker")
             {
                 ShortcutKeys = Keys.Control | Keys.T,
                 ShowShortcutKeys = true
@@ -445,7 +445,7 @@ namespace TikzGraphGen.Visualization
             ((ToolStripMenuItem)init.DropDownItems[0]).Checked = true;
             tool.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Merge") //(G \ e)
+            init = new("Merge") //(G \ e)
             {
                 ShortcutKeys = Keys.Control | Keys.M,
                 ShowShortcutKeys = true
@@ -453,7 +453,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Merge;
             tool.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("Split")
+            init = new("Split")
             {
                 ShortcutKeys = Keys.Control | Keys.J,
                 ShowShortcutKeys = true
@@ -517,12 +517,14 @@ namespace TikzGraphGen.Visualization
             return tool;
         }
 
+#pragma warning disable CA1822 // Mark members as static
         private ToolStripMenuItem InitializeAnalyzeOptions()
+#pragma warning restore CA1822 // Mark members as static
         {
-            ToolStripMenuItem analysis = new ToolStripMenuItem("&Analysis");
+            ToolStripMenuItem analysis = new("&Analysis");
 
-            ToolStripMenuItem search = new ToolStripMenuItem("Searches");
-            ToolStripMenuItem spg = new ToolStripMenuItem("Platonic Subgraph");
+            ToolStripMenuItem search = new("Searches");
+            ToolStripMenuItem spg = new("Platonic Subgraph");
             spg.DropDownItems.AddRange(new ToolStripItem[]{
                 new ToolStripButton("Tetrahedron"),
                 new ToolStripButton("Cube"),
@@ -539,7 +541,7 @@ namespace TikzGraphGen.Visualization
                 new ToolStripButton("Subgraph K_n,m"), //Enter n,m
                 spg
             });
-            ToolStripMenuItem identify = new ToolStripMenuItem("Tests");
+            ToolStripMenuItem identify = new("Tests");
             identify.DropDownItems.AddRange(new ToolStripItem[] {
                 new ToolStripButton("Eulerian Path"),
                 new ToolStripButton("Hamiltonian Path"),
@@ -553,7 +555,7 @@ namespace TikzGraphGen.Visualization
                 new ToolStripButton("Girth"),
                 new ToolStripButton("Graph Genus") //(???)
             });
-            ToolStripMenuItem optimize = new ToolStripMenuItem("Optimizations");
+            ToolStripMenuItem optimize = new("Optimizations");
             optimize.DropDownItems.AddRange(new ToolStripItem[]{
                 new ToolStripButton("Minimal Vertex Coloring"),
                 new ToolStripButton("Minimal Edge Coloring"),
@@ -562,7 +564,7 @@ namespace TikzGraphGen.Visualization
                 new ToolStripButton("Critical Path"),
                 new ToolStripButton("Maximum Flow") //(define source/sink values)
             });
-            ToolStripMenuItem transform = new ToolStripMenuItem("Mutations");
+            ToolStripMenuItem transform = new("Mutations");
             transform.DropDownItems.AddRange(new ToolStripItem[] {
                 new ToolStripButton("Planarize"), //(?)
                 new ToolStripButton("Outerplanar"),
@@ -584,15 +586,15 @@ namespace TikzGraphGen.Visualization
 
         private ToolStripMenuItem InitializeHelpOptions()
         {
-            ToolStripMenuItem help = new ToolStripMenuItem("&Help");
-            ToolStripMenuItem init = new ToolStripMenuItem("Guide")
+            ToolStripMenuItem help = new("&Help");
+            ToolStripMenuItem init = new("Guide")
             {
                 ShortcutKeys = Keys.F1,
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.Guide();
             help.DropDownItems.Add(init);
-            init = new ToolStripMenuItem("Context Help")
+            init = new("Context Help")
             {
                 ShortcutKeys = Keys.Shift | Keys.F1,
                 ShowShortcutKeys = true
@@ -600,7 +602,7 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.ContextHelp();
             help.DropDownItems.Add(init);
 
-            init = new ToolStripMenuItem("About");
+            init = new("About");
             init.Click += (o, e) => _rsc.About();
             help.DropDownItems.Add("About");
 

@@ -2,9 +2,9 @@
 {
     public class CurvedEdge : Edge
     {
-        public float ExitAngle { get; set; }
-        public float EnterAngle { get; set; }
-        public float CurveLooseness { get; set; }
+        public float ExitAngle { get; private set; }
+        public float EnterAngle { get; private set; }
+        public float CurveLooseness { get; private set; }
 
         public CurvedEdge(GraphInfo settings) : base(settings)
         {
@@ -23,6 +23,11 @@
             ExitAngle = exitAngle;
             EnterAngle = enterAngle;
             CurveLooseness = looseness;
+        }
+
+        public override string ToString()
+        {
+            return $"{_source} u> {_destination}";
         }
     }
 }

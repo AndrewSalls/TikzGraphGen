@@ -31,16 +31,16 @@ namespace TikzGraphGen.Visualization
             if (_compiler.HasFileName())
             {
                 Controls.Add(_content);
-                _content.Url = new Uri(_compiler.GetFilePath());
+                _content.Url = new(_compiler.GetFilePath());
                 _content.Dock = DockStyle.Fill;
                 return true;
             }
 
-            Label noPDF = new Label()
+            Label noPDF = new()
             {
                 Text = NO_PDF_TEXT,
                 ForeColor = Color.AntiqueWhite,
-                Font = new Font(FontFamily.GenericSansSerif, 14, FontStyle.Regular),
+                Font = new(FontFamily.GenericSansSerif, 14, FontStyle.Regular),
                 TextAlign = ContentAlignment.MiddleCenter,
                 Dock = DockStyle.Fill
             };

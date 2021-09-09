@@ -49,7 +49,7 @@ namespace TikzGraphGen
 
         private bool PromptFileName()
         {
-            SaveFileDialog save = new SaveFileDialog
+            SaveFileDialog save = new()
             {
                 Filter = FILE_SAVE_EXTENSION,
                 FileName = "Untitled",
@@ -75,7 +75,7 @@ namespace TikzGraphGen
         private async void ConvertToTikzAsync(Graph data)
         {
             Compiling = true;
-            StreamWriter ostream = new StreamWriter(File.OpenWrite(GetFilePath()));
+            StreamWriter ostream = new(File.OpenWrite(GetFilePath()));
             foreach(string s in GetNextLine(data))
             {
                 await ostream.WriteLineAsync(s);
@@ -85,7 +85,7 @@ namespace TikzGraphGen
             Compiling = false;
         }
 
-        private IEnumerable<string> GetNextLine(Graph data)
+        private static IEnumerable<string> GetNextLine(Graph data)
         {
             Color _ = data.BGColor;
             //TODO: FINISH THIS
@@ -100,8 +100,8 @@ namespace TikzGraphGen
                 Save(data, false);
 
                 string path = GetFilePath();
-                path = path.Substring(0, path.Length - 4);
-                ProcessStartInfo info = new ProcessStartInfo
+                path = path[0..^4];
+                ProcessStartInfo info = new()
                 {
                     CreateNoWindow = true,
                     UseShellExecute = true,

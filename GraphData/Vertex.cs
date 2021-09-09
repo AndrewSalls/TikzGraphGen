@@ -11,9 +11,9 @@ namespace TikzGraphGen
             Above, Below, Left, Right
         }
 
-        public VertexBorderStyle Style { get; set; }
-        public string Label { get; set; }
-        public double Value { get; set; }
+        public VertexBorderStyle Style { get; private set; }
+        public string Label { get; private set; }
+        public double Value { get; private set; }
         public Coord Offset { get; set; }
         protected HashSet<Edge> _incident;
 
@@ -58,6 +58,11 @@ namespace TikzGraphGen
         public List<Edge> ViewEdges()
         {
             return _incident.ToList();
+        }
+
+        public override string ToString()
+        {
+            return $"({Label} | {Offset.X}, {Offset.Y})";
         }
     }
 }

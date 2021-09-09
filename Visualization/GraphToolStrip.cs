@@ -103,9 +103,9 @@ namespace TikzGraphGen.Visualization
             };
         }
 
-        private Button GenerateButton(string name, Bitmap icon, EventHandler click)
+        private static Button GenerateButton(string name, Bitmap icon, EventHandler click)
         {
-            Button output = new Button()
+            Button output = new()
             {
                 Name = name,
                 BackgroundImage = icon,

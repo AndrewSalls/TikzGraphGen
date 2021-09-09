@@ -2,7 +2,7 @@
 {
     public class BentEdge : Edge
     {
-        public float BendDegree { get; set; }
+        public float BendDegree { get; private set; }
         public BentEdge(GraphInfo settings) : base(settings)
         {
             BendDegree = 0;
@@ -14,6 +14,11 @@
         public BentEdge(EdgeLineStyle e, Vertex s, Vertex d, FreeLabel label, float bendDegree) : base(e, s, d, label)
         {
             BendDegree = bendDegree;
+        }
+
+        public override string ToString()
+        {
+            return $"{_source} ^> {_destination}";
         }
     }
 }

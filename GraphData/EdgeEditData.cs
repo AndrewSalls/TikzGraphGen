@@ -18,7 +18,7 @@ namespace TikzGraphGen.GraphData
         public EdgeEditData(Edge v, EditDataQuantifier quantifiers)
         {
             _edges = new Edge[] { v };
-            _editedEdges = new Edge[0];
+            _editedEdges = Array.Empty<Edge>();
             _quantifiers = quantifiers & ~EditDataQuantifier.Plural;
         }
         public EdgeEditData(Edge[] vs, Edge[] evs)
@@ -30,7 +30,7 @@ namespace TikzGraphGen.GraphData
         public EdgeEditData(Edge[] vs, EditDataQuantifier quantifiers)
         {
             _edges = vs;
-            _editedEdges = new Edge[0];
+            _editedEdges = Array.Empty<Edge>();
             _quantifiers = quantifiers & EditDataQuantifier.Plural;
         }
 

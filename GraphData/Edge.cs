@@ -2,9 +2,9 @@
 {
     public class Edge
     {
-        public EdgeLineStyle Style { get; set; }
-        public FreeLabel Label { get; set; }
-        public double Value { get; set; }
+        public EdgeLineStyle Style { get; private set; }
+        public FreeLabel Label { get; private set; }
+        public double Value { get; private set; }
         protected Vertex _source, _destination;
 
         public Edge(GraphInfo settings)
@@ -67,6 +67,11 @@
         public Vertex ViewDestination()
         {
             return _destination;
+        }
+
+        public override string ToString()
+        {
+            return $"{_source} -> {_destination}";
         }
     }
 }

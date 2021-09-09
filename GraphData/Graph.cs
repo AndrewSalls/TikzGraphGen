@@ -4,7 +4,7 @@ using System.Linq;
 using TikzGraphGen.GraphData;
 using static TikzGraphGen.GraphData.GraphEditData;
 
-namespace TikzGraphGen //TODO: Make Graphs & their components immutable, and make info updated to include new vertex/edge count. Also implement toString
+namespace TikzGraphGen
 {
     //TODO: bend support, shade support, custom path pattern support
     //TODO: Decoration/Shapes/Snake/Arrows, maybe Patterns/Mindmap library support
@@ -57,12 +57,14 @@ namespace TikzGraphGen //TODO: Make Graphs & their components immutable, and mak
         {
             Vertex output = new(_info, position);
             _vertices.Add(output);
+            _info.vertexCount++;
             if (!undoing)
                 AddHistoryUpdate(new VertexEditData(output, EditDataQuantifier.Add));
         }
         public void AddVertex(Vertex toAdd, bool undoing = false)
         {
             _vertices.Add(toAdd);
+            _info.vertexCount++;
             if (!undoing)
                 AddHistoryUpdate(new VertexEditData(toAdd, EditDataQuantifier.Add));
         }
@@ -78,6 +80,7 @@ namespace TikzGraphGen //TODO: Make Graphs & their components immutable, and mak
             from.Connect(output);
             to.Connect(output);
             output.Connect(from, to);
+            _info.edgeCount++;
             if (!undoing)
                 AddHistoryUpdate(new EdgeEditData(output, EditDataQuantifier.Add));
         }
@@ -87,6 +90,7 @@ namespace TikzGraphGen //TODO: Make Graphs & their components immutable, and mak
             from.Connect(toAdd);
             to.Connect(toAdd);
             toAdd.Connect(from, to);
+            _info.edgeCount++;
             if (!undoing)
                 AddHistoryUpdate(new EdgeEditData(toAdd, EditDataQuantifier.Add));
         }
@@ -101,7 +105,8 @@ namespace TikzGraphGen //TODO: Make Graphs & their components immutable, and mak
         public void AddConnectedEdge(Edge toAdd, bool undoing = false)
         {
             _edges.Add(toAdd);
-            if(!undoing)
+            _info.edgeCount++;
+            if (!undoing)
                 AddHistoryUpdate(new EdgeEditData(toAdd, EditDataQuantifier.Add));
         }
 
@@ -110,12 +115,14 @@ namespace TikzGraphGen //TODO: Make Graphs & their components immutable, and mak
             Graph removedSub = new(_info);
 
             _vertices.Remove(toRemove);
+            _info.vertexCount--;
             if (!undoing)
                 removedSub.AddVertex(toRemove);
             foreach(Edge e in _edges.Where(e => e.IsIncidentTo(toRemove)))
             {
                 _edges.Remove(e);
                 _vertices.First(v => v.IsIncidentTo(e)).Disconnect(e);
+                _info.edgeCount--;
                 if (!undoing)
                     removedSub.AddConnectedEdge(e);
             }
@@ -127,6 +134,7 @@ namespace TikzGraphGen //TODO: Make Graphs & their components immutable, and mak
         {
             _edges.Remove(toRemove);
             toRemove.Disconnect();
+            _info.edgeCount--;
             if (!undoing)
                 AddHistoryUpdate(new EdgeEditData(toRemove, EditDataQuantifier.Remove));
         }
@@ -260,6 +268,11 @@ namespace TikzGraphGen //TODO: Make Graphs & their components immutable, and mak
             }
 
             return output;
+        }
+
+        public override string ToString()
+        {
+            return $"Vertices: {_info.vertexCount} | Edges: {_info.edgeCount}\nConnections: {_edges.Aggregate("", (e, s) => $"{s}\n{e}")}";
         }
     }
 }

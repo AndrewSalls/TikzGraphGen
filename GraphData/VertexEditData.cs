@@ -18,7 +18,7 @@ namespace TikzGraphGen.GraphData
         public VertexEditData(Vertex v, EditDataQuantifier quantifiers)
         {
             _vertices = new Vertex[] { v };
-            _editedVertices = new Vertex[0];
+            _editedVertices = Array.Empty<Vertex>();
             _quantifiers = quantifiers & ~EditDataQuantifier.Plural;
         }
         public VertexEditData(Vertex[] vs, Vertex[] evs)
@@ -30,7 +30,7 @@ namespace TikzGraphGen.GraphData
         public VertexEditData(Vertex[] vs, EditDataQuantifier quantifiers)
         {
             _vertices = vs;
-            _editedVertices = new Vertex[0];
+            _editedVertices = Array.Empty<Vertex>();
             _quantifiers = quantifiers & EditDataQuantifier.Plural;
         }
 
