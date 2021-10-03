@@ -307,14 +307,18 @@ namespace TikzGraphGen.Visualization
             switch (_rsc.CurrentTool)
             {
                 case SelectedTool.Vertex:
-                    _graph.CreateVertex(_visibleCorner + mousePos * zoomAmt);
-                    Refresh();
+                    if (!_isDragging)
+                    {
+                        _graph.CreateVertex(_visibleCorner + mousePos * zoomAmt);
+                        Refresh();
+                    }
                     break;
                 case SelectedTool.Edge:
-                   if(_firstVertex == null)
+                    if(_firstVertex == null)
                         _firstVertex = GetVertexAt(_visibleCorner + mousePos * zoomAmt);
-                   else
+                    else
                     {
+                        System.Diagnostics.Debug.WriteLine("test a");
                         Vertex _secondVertex = GetVertexAt(_visibleCorner + mousePos * zoomAmt);
                         if (_firstVertex != null && _secondVertex != null && _firstVertex != _secondVertex && !_firstVertex.IsAdjacentTo(_secondVertex)) //TODO: Make support loops & multiedges later (give warning or automatically curve lines) (A -> A)
                             _graph.CreateEdge(_firstVertex, _secondVertex);
@@ -328,12 +332,10 @@ namespace TikzGraphGen.Visualization
                 default:
                     throw new NotImplementedException();
             }
-        } //TODO: Fix mouse clicking without dragging for edges so it actually works
+        }
         public void TikzDrawingWindow_MouseDown(object sender, MouseEventArgs e)
         {
             _mouseDownPos = e.Location;
-            if(_firstVertex == null)
-                _firstVertex = GetVertexAt(_visibleCorner + (Coord)e.Location * (_fixedZoomLevel != UNIQUE_ZOOM_LEVEL ? FIXED_ZOOM_LEVEL_PERCENT[_fixedZoomLevel] : _variableZoom));
         }
         public void TikzDrawingWindow_MouseMove(object sender, MouseEventArgs e)
         {
@@ -346,6 +348,8 @@ namespace TikzGraphGen.Visualization
         private void DragEvent(object sender, MouseEventArgs e)
         {
             _isDragging = true;
+            if(_mouseDownPos != null)
+                _firstVertex = GetVertexAt(_visibleCorner + (Coord)_mouseDownPos * (_fixedZoomLevel != UNIQUE_ZOOM_LEVEL ? FIXED_ZOOM_LEVEL_PERCENT[_fixedZoomLevel] : _variableZoom)); ;
 
             Refresh();
         }
