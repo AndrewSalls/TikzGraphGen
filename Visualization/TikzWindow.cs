@@ -170,36 +170,36 @@ namespace TikzGraphGen.Visualization
 
         private void OpenInfoWindow()
         {
-            throw new();
+            throw new NotImplementedException();
         }
         private void OpenHistoryWindow()
         {
-            throw new();
+            throw new NotImplementedException();
         }
         private void OpenResizeDialog()
         {
-            throw new();
+            throw new NotImplementedException();
         }
         private void OpenUnitDialog()
         {
-            throw new();
+            throw new NotImplementedException();
         }
         private void OpenFontWindow()
         {
-            throw new();
+            throw new NotImplementedException();
         }
         private void OpenPreferencesWindow()
         {
-            throw new();
+            throw new NotImplementedException();
         }
 
         private void OpenHelpWindow()
         {
-            throw new();
+            throw new NotImplementedException();
         }
         private void OpenAboutWindow()
         {
-            throw new();
+            throw new NotImplementedException();
         }
     }
 }

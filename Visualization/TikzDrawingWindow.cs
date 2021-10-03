@@ -35,7 +35,9 @@ namespace TikzGraphGen.Visualization
         private float _variableZoom;
         private Coord _visibleCorner;
 
-        private bool _drawBorder; //TODO: Make these do something (AKA implement OnPaint and OnMouseMove/OnMouseClick)
+        private Vertex _firstVertex;
+
+        private bool _drawBorder;
         private bool _angleSnap;
         private bool _unitSnap;
         private bool _drawUnitGrid; 
@@ -54,6 +56,8 @@ namespace TikzGraphGen.Visualization
             _drawBorder = true;
             _angleSnap = true;
             _unitSnap = false;
+
+            _firstVertex = null;
 
             Owner = parent;
             TopLevel = false;
@@ -210,6 +214,8 @@ namespace TikzGraphGen.Visualization
                 foreach(Edge eg in sub.ViewEdges())
                     DrawEdge(e.Graphics, eg, FindDistanceFrom(_visibleCorner, eg.ViewSource()), FindDistanceFrom(_visibleCorner, eg.ViewDestination()));
             }
+
+            //TODO: Draw border and/or unit grid here
         }
 
         private static Coord FindDistanceFrom(Coord point, Vertex v)
@@ -268,6 +274,18 @@ namespace TikzGraphGen.Visualization
 
         public void TikzDrawingWindow_Click(object sender, MouseEventArgs e)
         {
+            if (ModifierKeys == Keys.Control)
+            {
+                for (int i = 0; i < e.Delta; i++)
+                {
+                    ZoomIn();
+                }
+                for (int i = e.Delta; i < 0; i++)
+                {
+                    ZoomOut();
+                }
+            }
+
             Coord mousePos = e.Location;
             float zoomAmt = _fixedZoomLevel != UNIQUE_ZOOM_LEVEL ? FIXED_ZOOM_LEVEL_PERCENT[_fixedZoomLevel] : _variableZoom;
 
@@ -277,9 +295,29 @@ namespace TikzGraphGen.Visualization
                     _graph.CreateVertex(_visibleCorner + mousePos * zoomAmt);
                     Refresh();
                     break;
+                case SelectedTool.Edge:
+                   if(_firstVertex == null)
+                        _firstVertex = GetVertexAt(_visibleCorner + mousePos * zoomAmt);
+                   else
+                    {
+                        Vertex _secondVertex = GetVertexAt(_visibleCorner + mousePos * zoomAmt);
+                        if (_firstVertex != null && _secondVertex != null && _firstVertex != _secondVertex && !_firstVertex.IsAdjacentTo(_secondVertex)) //TODO: Make support loops & multiedges later (give warning or automatically curve lines) (A -> A)
+                            _graph.CreateEdge(_firstVertex, _secondVertex);
+                        _firstVertex = null;
+                    }
+                    Refresh();
+                    break;
                 default:
                     throw new NotImplementedException();
             }
+        }
+
+        private Vertex GetVertexAt(Coord c)
+        {
+            return _graph.ViewVertices().Find(v => (c.X >= v.Offset.X - v.Style.Radius - (v.Style.OblongWidth / 2) &&
+                   c.Y >= v.Offset.Y - v.Style.Radius - (v.Style.OblongHeight / 2) &&
+                   c.X <= v.Offset.X + v.Style.Radius + (v.Style.OblongWidth / 2) &&
+                   c.Y <= v.Offset.Y + v.Style.Radius + (v.Style.OblongWidth / 2)));
         }
     }
 }

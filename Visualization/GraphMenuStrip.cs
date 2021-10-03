@@ -197,7 +197,7 @@ namespace TikzGraphGen.Visualization
         {
             ToolStripMenuItem view = new("&View");
 
-            ToolStripMenuItem init = new("Zoom In"); //TODO: Add ctrl + mouse^/v to MouseWheel event
+            ToolStripMenuItem init = new("Zoom In");
             init.Click += (o, e) => _rsc.ZoomInc();
             view.DropDownItems.Add(init);
 
