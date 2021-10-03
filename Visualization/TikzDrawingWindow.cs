@@ -7,17 +7,20 @@ using TikzGraphGen.GraphData;
 namespace TikzGraphGen.Visualization
 {
     //TODO: Make vertex/edge thickness, radius, etc. and distance from the corner scale to zoom level
+    //TODO: Add flag for _rsc that prevents changing tools while performing an action with the current tool
     public class TikzDrawingWindow : Form
     {
         public enum SelectedTool
         {
-            Vertex, Edge, EdgeCap, Label, Transform, Select, AreaSelect, Lasso, Weight, Tracker, Merge, Split
+            Vertex, Edge, EdgeCap, Label, Eraser, Transform, Select, AreaSelect, Lasso, Weight, Tracker, Merge, Split
         }
         public static readonly float[] FIXED_ZOOM_LEVEL_PERCENT = new float[] { 1/16, 1/8, 1/4, 1/3, 1/2, 1, 2, 3, 4, 8, 16 };
         public static readonly float ZOOM_OOB_MULTIPLIER = 0.8f;
         public static readonly int UNIQUE_ZOOM_LEVEL = -1;
 
         public static readonly Color DRAWING_BACKGROUND_COLOR = Color.White;
+
+        public static readonly double DRAG_SENSITIVITY = 8.0; //distance before dragging is recognized, in pixels
 
         public static readonly GraphInfo DEFAULT_GRAPH_SETTINGS = new()
         {
@@ -34,6 +37,9 @@ namespace TikzGraphGen.Visualization
         private int _fixedZoomLevel;
         private float _variableZoom;
         private Coord _visibleCorner;
+        private Point? _mouseDownPos;
+        private Point? _mouseDragPos;
+        private bool _isDragging;
 
         private Vertex _firstVertex;
 
@@ -56,6 +62,9 @@ namespace TikzGraphGen.Visualization
             _drawBorder = true;
             _angleSnap = true;
             _unitSnap = false;
+            _mouseDownPos = null;
+            _mouseDragPos = null;
+            _isDragging = false;
 
             _firstVertex = null;
 
@@ -71,6 +80,9 @@ namespace TikzGraphGen.Visualization
             SetStyle(ControlStyles.DoubleBuffer, true);
 
             MouseClick += TikzDrawingWindow_Click;
+            MouseDown += TikzDrawingWindow_MouseDown;
+            MouseMove += TikzDrawingWindow_MouseMove;
+            MouseUp += TikzDrawingWindow_MouseUp;
 
             _rsc.Undo += () => _graph = Graph.Undo(_graph);
             _rsc.Redo += () => _graph = Graph.Redo(_graph);
@@ -215,6 +227,9 @@ namespace TikzGraphGen.Visualization
                     DrawEdge(e.Graphics, eg, FindDistanceFrom(_visibleCorner, eg.ViewSource()), FindDistanceFrom(_visibleCorner, eg.ViewDestination()));
             }
 
+            if (_rsc.CurrentTool == SelectedTool.Edge && _isDragging && _firstVertex != null)
+                DrawEdge(e.Graphics, new Edge(_graph.Info, null, null), _firstVertex.Offset, _mouseDragPos ?? _mouseDownPos);
+            
             //TODO: Draw border and/or unit grid here
         }
 
@@ -307,9 +322,46 @@ namespace TikzGraphGen.Visualization
                     }
                     Refresh();
                     break;
+                case SelectedTool.Eraser: //TODO: Fix so this actually works
+                    _graph.RemoveSubgraph(_graph.GetSubgraphWithin(_visibleCorner + mousePos * zoomAmt - new Coord(_rsc.ToolInfo.EraserInfo.Radius / 2.0f, _rsc.ToolInfo.EraserInfo.Radius / 2.0f), _rsc.ToolInfo.EraserInfo.Radius / 2.0f, _rsc.ToolInfo.EraserInfo.Radius / 2.0f));
+                    break;
                 default:
                     throw new NotImplementedException();
             }
+        } //TODO: Fix mouse clicking without dragging for edges so it actually works
+        public void TikzDrawingWindow_MouseDown(object sender, MouseEventArgs e)
+        {
+            _mouseDownPos = e.Location;
+            if(_firstVertex == null)
+                _firstVertex = GetVertexAt(_visibleCorner + (Coord)e.Location * (_fixedZoomLevel != UNIQUE_ZOOM_LEVEL ? FIXED_ZOOM_LEVEL_PERCENT[_fixedZoomLevel] : _variableZoom));
+        }
+        public void TikzDrawingWindow_MouseMove(object sender, MouseEventArgs e)
+        {
+            _mouseDragPos = e.Location;
+
+            if (_isDragging || (_mouseDownPos != null && Math.Sqrt(Math.Pow(e.Location.X - ((Point)_mouseDownPos).X, 2) + Math.Pow(e.Location.Y - ((Point)_mouseDownPos).Y, 2)) > DRAG_SENSITIVITY))
+                DragEvent(sender, e);
+        }
+
+        private void DragEvent(object sender, MouseEventArgs e)
+        {
+            _isDragging = true;
+
+            Refresh();
+        }
+
+        public void TikzDrawingWindow_MouseUp(object sender, MouseEventArgs e)
+        {
+            Vertex _secondVertex = GetVertexAt(_visibleCorner + (Coord)e.Location * (_fixedZoomLevel != UNIQUE_ZOOM_LEVEL ? FIXED_ZOOM_LEVEL_PERCENT[_fixedZoomLevel] : _variableZoom));
+
+            if (_firstVertex != null && _secondVertex != null && _isDragging && _firstVertex != _secondVertex && !_firstVertex.IsAdjacentTo(_secondVertex)) //TODO: Make support loops & multiedges later (give warning or automatically curve lines) (A -> A)
+                _graph.CreateEdge(_firstVertex, _secondVertex);
+
+            _mouseDownPos = null;
+            _mouseDragPos = null;
+            if (_isDragging)
+                _firstVertex = null;
+            _isDragging = false;
         }
 
         private Vertex GetVertexAt(Coord c)

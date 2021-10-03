@@ -30,6 +30,7 @@ namespace TikzGraphGen
 
         public Color BGColor { get; set; }
         private GraphInfo _info;
+        public GraphInfo Info { get { return _info; } }
         private readonly HashSet<Vertex> _vertices;
         private readonly HashSet<Edge> _edges;
 
@@ -263,7 +264,7 @@ namespace TikzGraphGen
                    v.Offset.Y + v.Style.Radius + (v.Style.OblongWidth / 2) <= visibleCorner.Y + height)
                 {
                     output.AddVertex(v, true);
-                    v.ViewEdges().Distinct().ToList().ForEach(e => output.AddConnectedEdge(e, true));
+                    v.ViewEdges().Distinct().ToList().ForEach(e => output.AddConnectedEdge(e, true)); //TODO: Account for case where vertex is on edge of area, and edge goes further outwards so it isn't in area
                 }       
             }
 

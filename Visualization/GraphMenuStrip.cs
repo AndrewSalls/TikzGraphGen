@@ -231,7 +231,7 @@ namespace TikzGraphGen.Visualization
 
             init = new("Page Border") //(create line showing page border + margin dimensions for PDF page)
             {
-                ShortcutKeys = Keys.Control | Keys.B,
+                ShortcutKeys = Keys.Control | Keys.Alt | Keys.B,
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.ToggleBorder();
@@ -357,6 +357,14 @@ namespace TikzGraphGen.Visualization
             init.ShortcutKeys = Keys.Control | Keys.Shift | Keys.L;
             init.ShowShortcutKeys = true;
             init.Click += (o, e) => _rsc.ToggleAngleSnap();
+
+            init = new("Eraser")
+            {
+                ShortcutKeys = Keys.Control | Keys.B,
+                ShowShortcutKeys = true
+            };
+            init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Eraser;
+            tool.DropDownItems.Add(init);
 
             init = new("Transform") //TODO: Add shortcuts for transform subtools
             {
@@ -485,29 +493,32 @@ namespace TikzGraphGen.Visualization
                     case SelectedTool.Label:
                         ((ToolStripMenuItem)tool.DropDownItems[3]).Checked = true;
                         break;
-                    case SelectedTool.Transform:
+                    case SelectedTool.Eraser:
                         ((ToolStripMenuItem)tool.DropDownItems[4]).Checked = true;
                         break;
-                    case SelectedTool.Select:
+                    case SelectedTool.Transform:
                         ((ToolStripMenuItem)tool.DropDownItems[5]).Checked = true;
                         break;
-                    case SelectedTool.AreaSelect:
+                    case SelectedTool.Select:
                         ((ToolStripMenuItem)tool.DropDownItems[6]).Checked = true;
                         break;
-                    case SelectedTool.Lasso:
-                        ((ToolStripMenuItem)tool.DropDownItems[8]).Checked = true;
+                    case SelectedTool.AreaSelect:
+                        ((ToolStripMenuItem)tool.DropDownItems[7]).Checked = true;
                         break;
-                    case SelectedTool.Weight:
+                    case SelectedTool.Lasso:
                         ((ToolStripMenuItem)tool.DropDownItems[9]).Checked = true;
                         break;
-                    case SelectedTool.Tracker:
+                    case SelectedTool.Weight:
                         ((ToolStripMenuItem)tool.DropDownItems[10]).Checked = true;
                         break;
-                    case SelectedTool.Merge:
+                    case SelectedTool.Tracker:
                         ((ToolStripMenuItem)tool.DropDownItems[11]).Checked = true;
                         break;
-                    case SelectedTool.Split:
+                    case SelectedTool.Merge:
                         ((ToolStripMenuItem)tool.DropDownItems[12]).Checked = true;
+                        break;
+                    case SelectedTool.Split:
+                        ((ToolStripMenuItem)tool.DropDownItems[13]).Checked = true;
                         break;
                     default:
                         throw new NotImplementedException();
