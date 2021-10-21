@@ -304,7 +304,26 @@ namespace TikzGraphGen
                 if(touching)
                 {
                     output.AddVertex(v, true);
-                    v.ViewEdges().Distinct().ToList().ForEach(e => output.AddConnectedEdge(e, true)); //TODO: Account for case where vertex is on edge of area, and edge goes further outwards so it isn't in area
+                    v.ViewEdges().Distinct().ToList().ForEach(e => output.AddConnectedEdge(e, true));
+                }
+            }
+
+            foreach(Edge e in _edges.Except(output.ViewEdges()))
+            {
+                Coord start = e.ViewSource().Offset;
+                Coord end = e.ViewDestination().Offset;
+
+                float ax = start.X - center.X, ay = start.Y - center.Y;
+                float bx = end.X - center.X, by = end.Y - center.Y;
+                float a = (bx - ax)*(bx - ax) + (by - ay)*(by - ay);
+                float b = 2 * (ax * (bx - ax) + ay * (by - ay));
+                float disc = b*b - 4 * a * (ax * ax + ay * ay - radius * radius);
+                if (disc > 0)
+                {
+                    float t1 = (-b + MathF.Sqrt(disc)) / (2 * a);
+                    float t2 = (-b - MathF.Sqrt(disc)) / (2 * a);
+                    if ((0 < t1 && t1 < 1) || (0 < t2 && t2 < 1))
+                        output.AddConnectedEdge(e, true);
                 }
             }
 
