@@ -87,7 +87,6 @@ namespace TikzGraphGen
 
         private static IEnumerable<string> GetNextLine(Graph data)
         {
-            Color _ = data.BGColor;
             //TODO: FINISH THIS
             yield return "\n";
             yield return "\n";
@@ -122,7 +121,7 @@ namespace TikzGraphGen
             _fileLocation = Path.GetFullPath(filename);
             _fileName = Path.GetFileNameWithoutExtension(filename);
             //TODO: Finish this
-            return new Graph(new GraphInfo());
+            return new Graph();
         }
     }
 }

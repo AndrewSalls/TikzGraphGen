@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using TikzGraphGen.GraphData;
-using static TikzGraphGen.GraphData.GraphEditData;
+using static TikzGraphGen.ToolSettingDictionary;
 
 namespace TikzGraphGen
 {
@@ -13,38 +13,21 @@ namespace TikzGraphGen
     //TODO: Saving to file and loading, copy/paste/save tikz output, UI, display output as actual tikz pdf
     //TODO: Convert Tikz output back into code
     //TODO: Add layer system
-    public struct GraphInfo
-    {
-        public Color defaultBGColor;
-        public VertexBorderStyle defaultBorders;
-        public EdgeLineStyle defaultLines;
-    }
 
-    public class Graph
+    public class Graph //TODO: Reimplement history
     {
         public static readonly int MAX_HISTORY = 500;
 
         public bool UpdateFlag { get; private set; } //TODO: Set this so that it is only true when the graph has values changed
 
-        public Color BGColor { get; set; }
-        private GraphInfo _info;
-        public GraphInfo Info { get { return _info; } }
         private readonly HashSet<Vertex> _vertices;
         private readonly HashSet<Edge> _edges;
 
-        private readonly GraphEditData[] _history;
-        private int _historyPos;
-
-        public Graph(GraphInfo defaultSettings)
+        public Graph()
         {
             UpdateFlag = false;
-            _info = defaultSettings;
-            BGColor = _info.defaultBGColor;
             _vertices = new HashSet<Vertex>();
             _edges = new HashSet<Edge>();
-
-            _history = new GraphEditData[MAX_HISTORY];
-            _historyPos = MAX_HISTORY;
         }
 
         public bool IsEmpty()
@@ -52,37 +35,29 @@ namespace TikzGraphGen
             return _vertices.Count + _edges.Count == 0;
         }
 
-        public Vertex CreateVertex(Coord position, bool undoing = false) //TODO: For this and AddVertex, adjust all vertices if necessary so that resulting graph is contained within (0, 0) to (x, y), with the minimal X and Y of any vertex being 0. Also needs to adjust DrawingWindow position so that graph stays in same position
+        public Vertex CreateVertex(Coord position, VertexToolInfo settings, bool undoing = false) //TODO: For this and AddVertex, adjust all vertices if necessary so that resulting graph is contained within (0, 0) to (x, y), with the minimal X and Y of any vertex being 0. Also needs to adjust DrawingWindow position so that graph stays in same position
         {
-            Vertex output = new(_info, position);
+            Vertex output = new(settings, position);
             _vertices.Add(output);
-
-            if (!undoing)
-                AddHistoryUpdate(new VertexEditData(output, EditDataQuantifier.Add));
 
             return output;
         }
         public void AddVertex(Vertex toAdd, bool undoing = false)
         {
             _vertices.Add(toAdd);
-            if (!undoing)
-                AddHistoryUpdate(new VertexEditData(toAdd, EditDataQuantifier.Add));
         }
 
         public List<Vertex> ViewVertices()
         {
             return _vertices.ToList();
         }
-        public Edge CreateEdge(Vertex from, Vertex to, bool undoing = false)
+        public Edge CreateEdge(Vertex from, Vertex to, EdgeToolInfo settings, bool undoing = false)
         {
-            Edge output = new(_info, from, to);
+            Edge output = new(settings, from, to);
             _edges.Add(output);
             from.Connect(output);
             to.Connect(output);
             output.Connect(from, to);
-
-            if (!undoing)
-                AddHistoryUpdate(new EdgeEditData(output, EditDataQuantifier.Add));
 
             return output;
         }
@@ -92,8 +67,6 @@ namespace TikzGraphGen
             from.Connect(toAdd);
             to.Connect(toAdd);
             toAdd.Connect(from, to);
-            if (!undoing)
-                AddHistoryUpdate(new EdgeEditData(toAdd, EditDataQuantifier.Add));
         }
         public List<Edge> ViewEdges()
         {
@@ -106,93 +79,55 @@ namespace TikzGraphGen
         public void AddConnectedEdge(Edge toAdd, bool undoing = false)
         {
             _edges.Add(toAdd);
-            if (!undoing)
-                AddHistoryUpdate(new EdgeEditData(toAdd, EditDataQuantifier.Add));
         }
 
         public void RemoveVertex(Vertex toRemove, bool undoing = false)
         {
-            Graph removedSub = new(_info);
-
             _vertices.Remove(toRemove);
-            if (!undoing)
-                removedSub.AddVertex(toRemove);
+
             foreach(Edge e in _edges.Where(e => e.IsIncidentTo(toRemove)))
             {
                 _edges.Remove(e);
                 _vertices.First(v => v.IsIncidentTo(e)).Disconnect(e);
-                if (!undoing)
-                    removedSub.AddConnectedEdge(e);
             }
+        }
+        public void DeleteVertex(Vertex toDelete, bool undoing = false)
+        {
+            _vertices.Remove(toDelete);
 
-            if(!undoing)
-                AddHistoryUpdate(new SubgraphEditData(removedSub, EditDataQuantifier.Remove));
+            foreach (Edge e in _edges.Where(e => e.IsIncidentTo(toDelete)))
+                _edges.Remove(e);
         }
         public void RemoveEdge(Edge toRemove, bool undoing = false)
         {
             _edges.Remove(toRemove);
-            toRemove.Disconnect();
-            if (!undoing)
-                AddHistoryUpdate(new EdgeEditData(toRemove, EditDataQuantifier.Remove));
         }
-
-        private void AddHistoryUpdate(GraphEditData data)
+        public void DeleteEdge(Edge toDelete, bool undoing = false)
         {
-            _historyPos--;
-
-            if (CanRedo())
-            {
-                for (int i = 0; i < _historyPos; i++)
-                    _history[i] = null;
-            }
-
-            if (_historyPos <= 0)
-            {
-                _history[MAX_HISTORY - 1] = null;
-                for (int i = MAX_HISTORY - 1; i >= 0; i--)
-                    _history[i] = _history[i - 1];
-            }
-
-            _history[_historyPos] = data;
+            _edges.Remove(toDelete);
+            toDelete.Disconnect();
         }
 
         public static Graph Undo(Graph g)
         {
-            if (g.CanUndo())
+            /*if (g.CanUndo())
             {
                 g._historyPos++;
                 return g._history[g._historyPos].UndoEdit(g);
             }
-
+            */
             return g;
         }
 
         public static Graph Redo(Graph g)
         {
-            if (g.CanRedo())
+            /*if (g.CanRedo())
             {
                 g._historyPos--;
                 return g._history[g._historyPos].RedoEdit(g);
             }
-
+            */
             return g;
-        }
-
-        public bool CanUndo()
-        {
-            return _historyPos < MAX_HISTORY - 1;
-        }
-        public bool CanRedo()
-        {
-            return _historyPos > 0 && _history[_historyPos - 1] != null;
-        }
-
-        public void ClearEditHistory()
-        {
-            for (int i = 0; i < MAX_HISTORY; i++)
-                _history[i] = null;
-
-            _historyPos = MAX_HISTORY;
         }
 
         public void RemoveSubgraph(Graph subgraph, bool undoing = false)
@@ -202,9 +137,14 @@ namespace TikzGraphGen
 
             foreach (Vertex v in subgraph._vertices)
                 RemoveVertex(v);
+        }
+        public void DeleteSubgraph(Graph subgraph, bool undoing = false)
+        {
+            foreach (Edge e in subgraph._edges)
+                DeleteEdge(e);
 
-            if (!undoing)
-                AddHistoryUpdate(new SubgraphEditData(subgraph, EditDataQuantifier.Remove));
+            foreach (Vertex v in subgraph._vertices)
+                DeleteVertex(v);
         }
         public void AddSubgraph(Graph subgraph, bool undoing = false)
         {
@@ -214,14 +154,11 @@ namespace TikzGraphGen
             foreach (Edge e in subgraph._edges) //TODO: option to either connect to old vertex, create new vertex using default settings, or delete edges. Default for now is connecting to old
                 //Should change to have default being creating a new vertex
                 AddConnectedEdge(e);
-
-            if (!undoing)
-                AddHistoryUpdate(new SubgraphEditData(subgraph, EditDataQuantifier.Add));
         }
 
         public void AddSubgraph(Graph subgraph, Coord offset, bool undoing = false)
         {
-            Graph newSubgraph = new(subgraph._info);
+            Graph newSubgraph = new();
             foreach(Vertex v in subgraph.ViewVertices())
             {
                 v.Offset += offset;
@@ -234,9 +171,6 @@ namespace TikzGraphGen
                 _edges.Add(e);
                 newSubgraph.AddConnectedEdge(e, true);
             }
-
-            if (!undoing)
-                AddHistoryUpdate(new SubgraphEditData(newSubgraph, EditDataQuantifier.Add));
         }
 
         /**
@@ -244,20 +178,20 @@ namespace TikzGraphGen
          **/
         public Coord GetBounds()
         {
-            float xMax = _vertices.Select(v => v.Offset.X + v.Style.Radius + (v.Style.OblongWidth / 2)).Max();
-            float yMax = _vertices.Select(v => v.Offset.Y + v.Style.Radius + (v.Style.OblongHeight / 2)).Max();
+            float xMax = _vertices.Select(v => v.Offset.X + v.Style.Radius + (v.Style.XRadius / 2)).Max();
+            float yMax = _vertices.Select(v => v.Offset.Y + v.Style.Radius + (v.Style.YRadius / 2)).Max();
             return new Coord(xMax, yMax);
         }
 
         public Graph GetSubgraphWithin(Coord visibleCorner, float width, float height)
         {
-            Graph output = new(_info);
+            Graph output = new();
             foreach (Vertex v in _vertices)
             {
-                if (v.Offset.X - v.Style.Radius - (v.Style.OblongWidth / 2) >= visibleCorner.X &&
-                   v.Offset.Y - v.Style.Radius - (v.Style.OblongHeight / 2) >= visibleCorner.Y &&
-                   v.Offset.X + v.Style.Radius + (v.Style.OblongWidth / 2) <= visibleCorner.X + width &&
-                   v.Offset.Y + v.Style.Radius + (v.Style.OblongWidth / 2) <= visibleCorner.Y + height)
+                if (v.Offset.X - v.Style.Radius - (v.Style.XRadius / 2) >= visibleCorner.X &&
+                   v.Offset.Y - v.Style.Radius - (v.Style.YRadius / 2) >= visibleCorner.Y &&
+                   v.Offset.X + v.Style.Radius + (v.Style.XRadius / 2) <= visibleCorner.X + width &&
+                   v.Offset.Y + v.Style.Radius + (v.Style.XRadius / 2) <= visibleCorner.Y + height)
                 {
                     output.AddVertex(v, true);
                     v.ViewEdges().Distinct().ToList().ForEach(e => output.AddConnectedEdge(e, true)); //TODO: Account for case where vertex is on edge of area, and edge goes further outwards so it isn't in area
@@ -268,7 +202,7 @@ namespace TikzGraphGen
         }
         public Graph GetSubgraphTouchingCircle(Coord center, float radius)
         {
-            Graph output = new(_info);
+            Graph output = new();
             foreach (Vertex v in _vertices)
             {
                 bool touching = false;
@@ -281,7 +215,7 @@ namespace TikzGraphGen
                         break;
                     case VertexBorderStyle.BorderStyle.Ellipse:
                         //Edge Intersection
-                        float ar = v.Style.OblongWidth, br = v.Style.OblongHeight;
+                        float ar = v.Style.XRadius, br = v.Style.YRadius;
                         float a = (br*br) / (2 * v.Offset.Y * ar*ar) - 1 / (2 * v.Offset.Y);
                         float b = (br*br * v.Offset.X) / (ar*ar * v.Offset.Y);
                         float c = (br*br * v.Offset.X*v.Offset.X) / (2 * ar*ar * v.Offset.Y) + (radius*radius) / (2 * v.Offset.Y) + v.Offset.Y / 2 - (br*br) / (2 * v.Offset.Y);
@@ -292,10 +226,10 @@ namespace TikzGraphGen
                         touching |= Coord.DistanceFrom(v.Offset, center) <= ar * br / MathF.Sqrt(ar*ar*MathF.Pow(MathF.Sin(angle), 2) + br*br*MathF.Pow(MathF.Cos(angle), 2));
                         break;
                     case VertexBorderStyle.BorderStyle.Rectangle:
-                        touching = (v.Offset.X + (v.Style.OblongWidth / 2) >= center.X - radius) &&
-                                   (v.Offset.X - (v.Style.OblongWidth / 2) <= center.X + radius) &&
-                                   (v.Offset.Y + (v.Style.OblongHeight / 2) >= center.Y - radius) &&
-                                   (v.Offset.Y - (v.Style.OblongHeight / 2) <= center.Y + radius);
+                        touching = (v.Offset.X + (v.Style.XRadius / 2) >= center.X - radius) &&
+                                   (v.Offset.X - (v.Style.XRadius / 2) <= center.X + radius) &&
+                                   (v.Offset.Y + (v.Style.YRadius / 2) >= center.Y - radius) &&
+                                   (v.Offset.Y - (v.Style.YRadius / 2) <= center.Y + radius);
                         break;
                     default:
                         throw new NotImplementedException();
@@ -356,12 +290,19 @@ namespace TikzGraphGen
 
             return false;
         }
-            public Vertex GetPointClosestTo(Coord pos)
+        public Vertex GetPointClosestTo(Coord pos)
         {
             if (_vertices.Count == 0)
                 return null;
 
             return _vertices.Aggregate((a, b) => Coord.DistanceFrom(pos, a.Offset) <= Coord.DistanceFrom(pos, b.Offset) ? a : b);
+        }
+
+        public void Translate(Coord amt, bool undoing = false)
+        {
+            Vertex[] temp = new Vertex[_vertices.Count];
+            _vertices.CopyTo(temp);
+            _vertices.ToList().ForEach(v => v.Offset += amt);
         }
 
         public override string ToString()

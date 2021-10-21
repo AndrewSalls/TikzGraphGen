@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using static TikzGraphGen.ToolSettingDictionary;
 
 namespace TikzGraphGen
 {
@@ -13,59 +14,51 @@ namespace TikzGraphGen
         {
             Solid, Dash, Dot, DotDash, DashDot, DashDotDot, None
         }
-        public Color Color { get; private set; }
-        public LineStyle Style { get; private set; }
-        public Concentration Density { get; private set; }
-        public float DashWidth { get; private set; }
-        public float DashSpacing { get; private set; }
-        public float PatternOffset { get; private set; }
-        public float Thickness { get; private set; }
-        public bool SDirected { get; private set; }
-        public bool TDirected { get; private set; }
+        public enum EdgeCapShape
+        {
+            Latex, Stealth, Triangle, OpenTriangle, Angle, Hook, Backet, Parenthesis, Circle, Star, Diamond, OpenDiamond, Serif,
+            LeftTo, LeftHook, RightTo, RightHook, RoundCap, ButtCap, TriangleCap, FastCap, None
+        }
+
+        private EdgeToolInfo _lineInfo;
+        public EdgeToolInfo LineInfo { get { return _lineInfo; } private set { _lineInfo = value; } }
+        private EdgeCapToolInfo _sCapInfo;
+        public EdgeCapToolInfo SDirectionCap { get { return _sCapInfo; } private set { _sCapInfo = value; } }
+        private EdgeCapToolInfo _tCapInfo;
+        public EdgeCapToolInfo TDirectionCap { get { return _tCapInfo; } private set { _tCapInfo = value; } }
 
         public EdgeLineStyle()
         {
-            Style = LineStyle.None;
-            Color = Color.Transparent;
-            Density = Concentration.Regular;
-            DashWidth = 0;
-            DashSpacing = 0;
-            PatternOffset = 0;
-            Thickness = 0;
-            SDirected = false;
-            TDirected = false;
+            _lineInfo = new EdgeToolInfo
+            {
+                Style = LineStyle.None,
+                Color = Color.Transparent,
+                Density = Concentration.Regular,
+                DashWidth = 0,
+                DashSpacing = 0,
+                PatternOffset = 0,
+                Thickness = 0
+            };
+            _sCapInfo = new EdgeCapToolInfo
+            {
+                IsReversed = false,
+                IsThick = false,
+                TriangleDegree = 90,
+                Style = EdgeCapShape.None
+            };
+            _tCapInfo = new EdgeCapToolInfo
+            {
+                IsReversed = false,
+                IsThick = false,
+                TriangleDegree = 90,
+                Style = EdgeCapShape.None
+            };
         }
-        public EdgeLineStyle(Color color, float thick)
+        public EdgeLineStyle(EdgeToolInfo line, EdgeCapToolInfo sCap, EdgeCapToolInfo tCap)
         {
-            Style = LineStyle.Solid;
-            Color = color;
-            Density = Concentration.Regular;
-            DashWidth = 0;
-            DashSpacing = 0;
-            PatternOffset = 0;
-            Thickness = thick;
-            SDirected = false;
-            TDirected = false;
-        }
-        public EdgeLineStyle(LineStyle style, Color color, Concentration density, float width, float spacing, float offset, float thick)
-        {
-            if (style.Equals(LineStyle.Solid) || style.Equals(LineStyle.None))
-                throw new ArgumentException("Solid and blank lines must use their constructor.");
-            Style = style;
-            Color = color;
-            Density = density;
-            DashWidth = width;
-            DashSpacing = spacing;
-            PatternOffset = offset;
-            Thickness = thick;
-            SDirected = false;
-            TDirected = false;
-        }
-        public EdgeLineStyle(LineStyle style, Color color, Concentration density, float width, float spacing, float offset, float thick, bool StoT, bool TtoS) : this(style, color, density, width, spacing, offset, thick)
-        {
-            Thickness = thick;
-            SDirected = StoT;
-            TDirected = TtoS;
+            LineInfo = line;
+            SDirectionCap = sCap;
+            TDirectionCap = tCap;
         }
     }
 }

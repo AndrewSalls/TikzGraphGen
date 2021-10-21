@@ -27,12 +27,7 @@ namespace TikzGraphGen.Visualization
         public static readonly Color ERASER_HIGHLIGHT_COLOR = Color.FromArgb(155, 200, 200, 200);
         public static readonly float MAX_ANGLE_LINK = 4.0f;
 
-        public static readonly GraphInfo DEFAULT_GRAPH_SETTINGS = new()
-        {
-            defaultBGColor = Color.White,
-            defaultLines = new EdgeLineStyle(Color.Black, 1),
-            defaultBorders = new VertexBorderStyle(VertexBorderStyle.BorderStyle.Circle, Color.Black, 1, 10)
-        };
+        public static readonly ToolSettingDictionary DEFAULT_GRAPH_SETTINGS = new();
 
         private readonly RoutedShortcutCommand _rsc;
         private Graph _graph;
@@ -56,10 +51,9 @@ namespace TikzGraphGen.Visualization
         private float _unitSize; //By default 1 unit = 1 mm
         private bool _drawUnitGrid; 
 
-        public TikzDrawingWindow(Form parent, RoutedShortcutCommand rsc) : this(parent, DEFAULT_GRAPH_SETTINGS, rsc) { }
-        public TikzDrawingWindow(Form parent, GraphInfo settings, RoutedShortcutCommand rsc) : base()
+        public TikzDrawingWindow(Form parent, RoutedShortcutCommand rsc) : base()
         {
-            _graph = new Graph(settings);
+            _graph = new Graph();
             _rsc = rsc;
             _selectedSubgraph = null;
             _subgraphCopy = null;
@@ -97,7 +91,7 @@ namespace TikzGraphGen.Visualization
 
             _rsc.Undo += () => _graph = Graph.Undo(_graph);
             _rsc.Redo += () => _graph = Graph.Redo(_graph);
-            _rsc.DeleteSelected += () => { _graph.RemoveSubgraph(_selectedSubgraph); _selectedSubgraph = null; };
+            _rsc.DeleteSelected += () => { _graph.DeleteSubgraph(_selectedSubgraph); _selectedSubgraph = null; };
             _rsc.Cut = () => { if (_selectedSubgraph != null) { _subgraphCopy = _selectedSubgraph; _graph.RemoveSubgraph(_subgraphCopy); _selectedSubgraph = null; } };
             _rsc.Copy = () => { if(_selectedSubgraph != null) _subgraphCopy = _selectedSubgraph; };
             _rsc.Paste = () => { if (_subgraphCopy != null) { _graph.AddSubgraph(_subgraphCopy, MouseToCoord(new Coord(MousePosition.X, MousePosition.Y))); } };
@@ -220,15 +214,6 @@ namespace TikzGraphGen.Visualization
             _visibleCorner += (dx, dy);
         }
 
-        public bool CanUndo()
-        {
-            return _graph.CanUndo();
-        }
-        public bool CanRedo()
-        {
-            return _graph.CanRedo();
-        }
-
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
@@ -246,17 +231,50 @@ namespace TikzGraphGen.Visualization
                 foreach(Edge eg in sub.ViewEdges())
                     DrawEdge(e.Graphics, eg, eg.ViewSource().Offset - _visibleCorner, eg.ViewDestination().Offset - _visibleCorner);
             }
-
-            if (_rsc.CurrentTool == SelectedTool.Edge && _isDragging && _firstVertex != null)
-                DrawEdge(e.Graphics, new Edge(_graph.Info, null, null), _firstVertex.Offset, _mouseDragPos);
-            if (_rsc.CurrentTool == SelectedTool.Eraser && _isDragging)
-                e.Graphics.FillEllipse(new SolidBrush(ERASER_HIGHLIGHT_COLOR), ((Coord)_mouseDragPos).X - _rsc.ToolInfo.EraserInfo.Radius, ((Coord)_mouseDragPos).Y - _rsc.ToolInfo.EraserInfo.Radius, 2 * _rsc.ToolInfo.EraserInfo.Radius, 2 * _rsc.ToolInfo.EraserInfo.Radius);
-            if (_rsc.CurrentTool == SelectedTool.Vertex && (_unitSnap || _angleSnap || _gridUnitSnap))
+            switch(_rsc.CurrentTool)
             {
-                Coord center = FindVertexRepositioning(new Coord(mouseGraphPos.X, mouseGraphPos.Y));
+                case SelectedTool.Vertex:
+                    if ((_unitSnap || _angleSnap || _gridUnitSnap))
+                    {
+                        Coord center = FindVertexRepositioning(new Coord(mouseGraphPos.X, mouseGraphPos.Y));
 
-                if(!center.Equals(mouseGraphPos) || (_unitSnap || _graph.GetPointClosestTo(mouseGraphPos) != null && Coord.DistanceFrom(mouseGraphPos, _graph.GetPointClosestTo(mouseGraphPos).Offset) <= MAX_ANGLE_LINK * _unitSize))
-                    e.Graphics.FillEllipse(new SolidBrush(ERASER_HIGHLIGHT_COLOR), center.X - _rsc.ToolInfo.VertexInfo.XRadius, center.Y - _rsc.ToolInfo.VertexInfo.YRadius, 2 * _rsc.ToolInfo.VertexInfo.XRadius, 2 * _rsc.ToolInfo.VertexInfo.YRadius);
+                        if (!center.Equals(mouseGraphPos) || _graph.GetPointClosestTo(mouseGraphPos) != null && Coord.DistanceFrom(mouseGraphPos, _graph.GetPointClosestTo(mouseGraphPos).Offset) <= MAX_ANGLE_LINK * _unitSize)
+                        {
+                            e.Graphics.FillEllipse(new SolidBrush(ERASER_HIGHLIGHT_COLOR), center.X - _rsc.ToolInfo.VertexInfo.Radius - _rsc.ToolInfo.VertexInfo.XRadius, center.Y - _rsc.ToolInfo.VertexInfo.Radius - _rsc.ToolInfo.VertexInfo.YRadius, 2 * _rsc.ToolInfo.VertexInfo.Radius + 2 * _rsc.ToolInfo.VertexInfo.XRadius, 2 * _rsc.ToolInfo.VertexInfo.Radius + 2 * _rsc.ToolInfo.VertexInfo.YRadius);
+                            Coord origin = _graph.GetPointClosestTo(mouseGraphPos)?.Offset;
+                            if (!_gridUnitSnap && _unitSnap && origin != null)
+                            {
+                                for (float dist = 0; dist <= MAX_ANGLE_LINK * _unitSize; dist += _unitSize)
+                                    e.Graphics.DrawEllipse(new Pen(new SolidBrush(ERASER_HIGHLIGHT_COLOR)), origin.X - dist, origin.Y - dist, 2 * dist, 2 * dist);
+                            }
+                            if (!_gridUnitSnap && _angleSnap && origin != null)
+                            {
+                                for (float sum = 0; sum <= 2 * MathF.PI; sum += _angleSnapAmt)
+                                    e.Graphics.DrawLine(new Pen(new SolidBrush(ERASER_HIGHLIGHT_COLOR)), origin, origin + (MAX_ANGLE_LINK * _unitSize) * new Coord(MathF.Cos(sum), MathF.Sin(sum)));
+                            }
+                        }
+                    }
+                    break;
+                case SelectedTool.Edge:
+                    if (_isDragging && _firstVertex != null)
+                        DrawEdge(e.Graphics, new Edge(_rsc.ToolInfo.EdgeInfo, null, null), _firstVertex.Offset, _mouseDragPos);
+                    break;
+                case SelectedTool.Eraser:
+                    if (_isDragging)
+                        e.Graphics.FillEllipse(new SolidBrush(ERASER_HIGHLIGHT_COLOR), ((Coord)_mouseDragPos).X - _rsc.ToolInfo.EraserInfo.Radius, ((Coord)_mouseDragPos).Y - _rsc.ToolInfo.EraserInfo.Radius, 2 * _rsc.ToolInfo.EraserInfo.Radius, 2 * _rsc.ToolInfo.EraserInfo.Radius);
+                    break;
+                case SelectedTool.Select:
+                    if(_selectedSubgraph != null && _isDragging)
+                    {
+                        foreach (Vertex v in _selectedSubgraph.ViewVertices())
+                            DrawVertex(e.Graphics, v, v.Offset - _visibleCorner);
+
+                        foreach (Edge eg in _selectedSubgraph.ViewEdges())
+                            DrawEdge(e.Graphics, eg, eg.ViewSource().Offset - _visibleCorner, eg.ViewDestination().Offset - _visibleCorner);
+                    }
+                    break;
+                default:
+                    throw new NotImplementedException();
             }
         }
 
@@ -329,11 +347,7 @@ namespace TikzGraphGen.Visualization
             {
                 case SelectedTool.Vertex:
                     if (!_isDragging)
-                    {
-                        Coord drawPos = FindVertexRepositioning(_visibleCorner + mousePos);
-
-                        _graph.CreateVertex(drawPos);
-                    }
+                        _graph.CreateVertex(FindVertexRepositioning(_visibleCorner + mousePos), _rsc.ToolInfo.VertexInfo);
                     break;
                 case SelectedTool.Edge:
                     if(_firstVertex == null)
@@ -342,39 +356,43 @@ namespace TikzGraphGen.Visualization
                     {
                         Vertex _secondVertex = GetVerticesIn(_visibleCorner + mousePos).FirstOrDefault();
                         if (_firstVertex != null && _secondVertex != null && _firstVertex != _secondVertex && !_firstVertex.IsAdjacentTo(_secondVertex)) //TODO: Make support loops & multiedges later (give warning or automatically curve lines) (A -> A)
-                            _graph.CreateEdge(_firstVertex, _secondVertex);
+                            _graph.CreateEdge(_firstVertex, _secondVertex, _rsc.ToolInfo.EdgeInfo);
 
                         _firstVertex = null;
                     }
                     break;
                 case SelectedTool.Eraser:
-                    Graph sub = _graph.GetSubgraphTouchingCircle(_visibleCorner + mousePos, _rsc.ToolInfo.EraserInfo.Radius);
+                    Graph sub = _graph.GetSubgraphTouchingCircle(_visibleCorner + mousePos, 1); //Very small eraser to try and only erase what is directly clicked on
                     if(sub.ViewEdges().Count > 0 || sub.ViewVertices().Count > 0)
-                        _graph.RemoveSubgraph(sub);
+                        _graph.DeleteSubgraph(sub);
+                    break;
+                case SelectedTool.Select:
+                    if(!_isDragging)
+                        _selectedSubgraph = _graph.GetSubgraphTouchingCircle(_visibleCorner + mousePos, 1); //Very small selector to try and only select what is directly clicked on
                     break;
                 default:
                     throw new NotImplementedException();
             }
         }
 
-        private Coord FindVertexRepositioning(Coord drawPos)
+        private Coord FindVertexRepositioning(Coord drawPos) //TODO: Add shortcut to lock snapping to the current closest vertex, so that intersecting snapping ranges are less annoying
         {
             Coord origin = _graph.GetPointClosestTo(drawPos)?.Offset ?? drawPos;
 
             float angle = Coord.AngleBetween(drawPos, origin);
             float offset = Coord.DistanceFrom(drawPos, origin);
 
-            if (!_gridUnitSnap && (origin.Equals(drawPos) || (!_unitSnap && offset > MAX_ANGLE_LINK * _unitSize)))
+            if (!_gridUnitSnap && (origin.Equals(drawPos) || offset > MAX_ANGLE_LINK * _unitSize))
                 return drawPos;
 
-            if (_unitSnap)
+            if (!_gridUnitSnap && _unitSnap)
             {
                 offset = Round(offset, _unitSize);
                 drawPos = new(origin.X + MathF.Cos(angle) * offset, origin.Y + MathF.Sin(angle) * offset);
             }
-            if (_angleSnap)
+            if (!_gridUnitSnap && _angleSnap)
             {
-                angle = Round(angle, _angleSnapAmt);
+                angle = MathF.Max(0, MathF.Min(Round(angle, _angleSnapAmt), 2 * MathF.PI));
                 drawPos = new(origin.X + MathF.Cos(angle) * offset, origin.Y + MathF.Sin(angle) * offset);
             }
             if(_gridUnitSnap)
@@ -395,22 +413,22 @@ namespace TikzGraphGen.Visualization
         public void TikzDrawingWindow_MouseDown(object sender, MouseEventArgs e)
         {
             _mouseDownPos = e.Location;
+            _mouseDragPos = e.Location;
         }
         public void TikzDrawingWindow_MouseMove(object sender, MouseEventArgs e)
         {
-            _mouseDragPos = e.Location;
 
             if (!_isDragging && _rsc.CurrentTool.Equals(SelectedTool.Vertex) && (_unitSnap || _angleSnap || _gridUnitSnap))
                 Refresh();
 
             if (_isDragging || (_mouseDownPos != null && Math.Sqrt(Math.Pow(e.Location.X - ((Point)_mouseDownPos).X, 2) + Math.Pow(e.Location.Y - ((Point)_mouseDownPos).Y, 2)) > DRAG_SENSITIVITY))
                 DragEvent(sender, e);
+
+            _mouseDragPos = e.Location;
         }
 
         private void DragEvent(object sender, MouseEventArgs e)
         {
-            _isDragging = true;
-
             Coord mousePos = e.Location;
 
             switch (_rsc.CurrentTool)
@@ -421,24 +439,46 @@ namespace TikzGraphGen.Visualization
                     if (_mouseDownPos != null)
                         _firstVertex = GetVerticesIn(_visibleCorner + _mouseDownPos).FirstOrDefault();
                     break;
-                case SelectedTool.Eraser: //TODO: Check for subgraph that touches circle, not that is inside of circle
+                case SelectedTool.Eraser:
                     Graph sub = _graph.GetSubgraphTouchingCircle(_visibleCorner + mousePos, _rsc.ToolInfo.EraserInfo.Radius);
                     if (sub.ViewEdges().Count > 0 || sub.ViewVertices().Count > 0)
-                        _graph.RemoveSubgraph(sub);
+                        _graph.DeleteSubgraph(sub);
+                    break;
+                case SelectedTool.Select:
+                    if (!_isDragging)
+                    {
+                        _selectedSubgraph = _graph.GetSubgraphTouchingCircle(_mouseDownPos, 1); //Very small selector to try and only click what is directly clicked on
+                        _graph.RemoveSubgraph(_selectedSubgraph, true);
+                    }
+                    _selectedSubgraph.Translate(mousePos - _mouseDragPos);
                     break;
                 default:
                     throw new NotImplementedException();
             }
+
+            _isDragging = true;
             Refresh();
         }
 
         public void TikzDrawingWindow_MouseUp(object sender, MouseEventArgs e)
         {
-            Vertex _secondVertex = GetVerticesIn(_visibleCorner + e.Location).FirstOrDefault();
+            switch (_rsc.CurrentTool)
+            {
+                case SelectedTool.Vertex:
+                case SelectedTool.Eraser:
+                    break;
+                case SelectedTool.Edge:
+                    Vertex _secondVertex = GetVerticesIn(_visibleCorner + e.Location).FirstOrDefault();
 
-            if (_firstVertex != null && _secondVertex != null && _isDragging && _firstVertex != _secondVertex && !_firstVertex.IsAdjacentTo(_secondVertex)) //TODO: Make support loops & multiedges later (give warning or automatically curve lines) (A -> A)
-                _graph.CreateEdge(_firstVertex, _secondVertex);
-
+                    if (_firstVertex != null && _secondVertex != null && _isDragging && _firstVertex != _secondVertex && !_firstVertex.IsAdjacentTo(_secondVertex)) //TODO: Make support loops & multiedges later (give warning or automatically curve lines) (A -> A)
+                        _graph.CreateEdge(_firstVertex, _secondVertex, _rsc.ToolInfo.EdgeInfo);
+                    break;
+                case SelectedTool.Select:
+                    _graph.AddSubgraph(_selectedSubgraph, true);
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
             _mouseDownPos = null;
             if (_isDragging)
                 _firstVertex = null;
@@ -449,10 +489,10 @@ namespace TikzGraphGen.Visualization
 
         private List<Vertex> GetVerticesIn(Coord c, float radius = 0)
         {
-            return _graph.ViewVertices().FindAll(v => c.X >= v.Offset.X - v.Style.Radius - (v.Style.OblongWidth / 2) - radius &&
-                   c.Y >= v.Offset.Y - v.Style.Radius - (v.Style.OblongHeight / 2) - radius &&
-                   c.X <= v.Offset.X + v.Style.Radius + (v.Style.OblongWidth / 2) + radius &&
-                   c.Y <= v.Offset.Y + v.Style.Radius + (v.Style.OblongWidth / 2) + radius);
+            return _graph.ViewVertices().FindAll(v => c.X >= v.Offset.X - v.Style.Radius - (v.Style.XRadius / 2) - radius &&
+                   c.Y >= v.Offset.Y - v.Style.Radius - (v.Style.YRadius / 2) - radius &&
+                   c.X <= v.Offset.X + v.Style.Radius + (v.Style.XRadius / 2) + radius &&
+                   c.Y <= v.Offset.Y + v.Style.Radius + (v.Style.XRadius / 2) + radius);
         }
         private List<Edge> GetEdgesIn(Coord coord, float radius = 0)
         {

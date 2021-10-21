@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using static TikzGraphGen.ToolSettingDictionary;
 
 namespace TikzGraphGen
 {
@@ -10,49 +11,44 @@ namespace TikzGraphGen
             Circle, CircleSplit, NoSign, Diamond, Cross, Strike, Rectangle, Ellipse, Polygon, Star, None
         }
 
-        public BorderStyle Style { get; private set; }
-        public Color BorderColor { get; private set; }
-        public float Thickness { get; private set; }
-        public float OblongWidth { get; private set; }
-        public float OblongHeight { get; private set; }
-        public int PolyCount { get; private set; }
-        public float Radius { get; private set; }
+        private VertexToolInfo _vertexInfo;
+        public VertexToolInfo VertexInfo { get; private set; }
         
         public VertexBorderStyle(BorderStyle style, Color color, float thick, float rad)
         {
             if (style.Equals(BorderStyle.Polygon) || style.Equals(BorderStyle.Star) || style.Equals(BorderStyle.Rectangle) || style.Equals(BorderStyle.Ellipse))
                 throw new ArgumentException("Polygons, stars, rectangles, and ellipses must use their constructor.");
-            Style = style;
-            BorderColor = color;
-            Thickness = thick;
-            Radius = rad;
-            OblongWidth = 0;
-            OblongHeight = 0;
-            PolyCount = 0;
+            _vertexInfo.Style = style;
+            _vertexInfo.BorderColor = color;
+            _vertexInfo.Thickness = thick;
+            _vertexInfo.Radius = rad;
+            _vertexInfo.XRadius = 0;
+            _vertexInfo.YRadius = 0;
+            _vertexInfo.PolyCount = 0;
         }
         public VertexBorderStyle(BorderStyle style, Color color, float thick, float rad, int polys)
         {
             if (!style.Equals(BorderStyle.Polygon) || !style.Equals(BorderStyle.Star))
                 throw new ArgumentException("Only polygon and star border styles can use the polygonal constructor.");
-            Style = style;
-            BorderColor = color;
-            Thickness = thick;
-            Radius = rad;
-            PolyCount = polys;
-            OblongWidth = 0;
-            OblongHeight = 0;
+            _vertexInfo.Style = style;
+            _vertexInfo.BorderColor = color;
+            _vertexInfo.Thickness = thick;
+            _vertexInfo.Radius = rad;
+            _vertexInfo.PolyCount = polys;
+            _vertexInfo.XRadius = 0;
+            _vertexInfo.YRadius = 0;
         }
         public VertexBorderStyle(BorderStyle style, Color color, float thick, float width, float height)
         {
             if (!style.Equals(BorderStyle.Rectangle) || !style.Equals(BorderStyle.Ellipse))
                 throw new ArgumentException("Only rectangle and ellipse border styles can use the non-regular constructor.");
-            Style = style;
-            BorderColor = color;
-            Thickness = thick;
-            Radius = 0;
-            PolyCount = 0;
-            OblongWidth = width;
-            OblongHeight = height;
+            _vertexInfo.Style = style;
+            _vertexInfo.BorderColor = color;
+            _vertexInfo.Thickness = thick;
+            _vertexInfo.Radius = 0;
+            _vertexInfo.PolyCount = 0;
+            _vertexInfo.XRadius = width;
+            _vertexInfo.YRadius = height;
         }
     }
 }

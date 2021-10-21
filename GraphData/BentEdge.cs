@@ -1,17 +1,19 @@
-﻿namespace TikzGraphGen
+﻿using static TikzGraphGen.ToolSettingDictionary;
+
+namespace TikzGraphGen
 {
     public class BentEdge : Edge
     {
         public float BendDegree { get; private set; }
-        public BentEdge(GraphInfo settings) : base(settings)
+        public BentEdge(EdgeToolInfo settings) : base(settings)
         {
             BendDegree = 0;
         }
-        public BentEdge(GraphInfo settings, Vertex s, Vertex d) : base(settings, s, d)
+        public BentEdge(Vertex s, Vertex d, EdgeToolInfo settings) : base(settings, s, d)
         {
             BendDegree = 0;
         }
-        public BentEdge(EdgeLineStyle e, Vertex s, Vertex d, FreeLabel label, float bendDegree) : base(e, s, d, label)
+        public BentEdge(Vertex s, Vertex d, FreeLabel label, float bendDegree, EdgeToolInfo settings) : base(settings, s, d, label)
         {
             BendDegree = bendDegree;
         }

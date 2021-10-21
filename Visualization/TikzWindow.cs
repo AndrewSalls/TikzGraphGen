@@ -152,9 +152,6 @@ namespace TikzGraphGen.Visualization
             _rsc.DisplayInfo = OpenInfoWindow;
             _rsc.Quit = Close;
 
-            _rsc.Undo += () => _rsc.CanUndo = _editor.CanUndo();
-            _rsc.Redo += () => _rsc.CanRedo = _editor.CanRedo();
-
             _rsc.DisplayHistory = OpenHistoryWindow;
             _rsc.ResizeAll = OpenResizeDialog;
             _rsc.SetUnits = OpenUnitDialog;

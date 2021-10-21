@@ -1,37 +1,31 @@
-﻿namespace TikzGraphGen
+﻿using static TikzGraphGen.ToolSettingDictionary;
+
+namespace TikzGraphGen
 {
     public class Edge
     {
-        public EdgeLineStyle Style { get; private set; }
+        public EdgeToolInfo Style { get; private set; }
         public FreeLabel Label { get; private set; }
         public double Value { get; private set; }
         protected Vertex _source, _destination;
 
-        public Edge(GraphInfo settings)
+        public Edge(EdgeToolInfo settings)
         {
-            Style = settings.defaultLines;
+            Style = settings;
             Label = null;
             Value = 0;
             _source = null;
             _destination = null;
         }
-        public Edge(GraphInfo settings, Vertex s, Vertex d)
+        public Edge(EdgeToolInfo settings, Vertex s, Vertex d)
         {
-            Style = settings.defaultLines;
+            Style = settings;
             Label = null;
             Value = 0;
             _source = s;
             _destination = d;
         }
-        public Edge(EdgeLineStyle e, Vertex s, Vertex d)
-        {
-            Style = e;
-            Label = null;
-            Value = 0;
-            _source = s;
-            _destination = d;
-        }
-        public Edge(EdgeLineStyle e, Vertex s, Vertex d, FreeLabel label)
+        public Edge(EdgeToolInfo e, Vertex s, Vertex d, FreeLabel label)
         {
             Style = e;
             Label = label;

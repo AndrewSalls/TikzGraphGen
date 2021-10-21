@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using TikzGraphGen.GraphData;
+using static TikzGraphGen.ToolSettingDictionary;
 
 namespace TikzGraphGen
 {
@@ -11,28 +12,28 @@ namespace TikzGraphGen
             Above, Below, Left, Right
         }
 
-        public VertexBorderStyle Style { get; private set; }
+        public VertexToolInfo Style { get; private set; }
         public string Label { get; private set; }
         public double Value { get; private set; }
         public Coord Offset { get; set; }
         protected HashSet<Edge> _incident;
 
-        public Vertex(GraphInfo settings, Coord offset)
+        public Vertex(VertexToolInfo settings, Coord offset)
         {
-            Style = settings.defaultBorders;
+            Style = settings;
             Label = offset.ToString();
             Value = 0;
             _incident = new HashSet<Edge>();
             Offset = offset;
         }
-        public Vertex(VertexBorderStyle s, string name, Coord offset)
+        public Vertex(VertexToolInfo s, string name, Coord offset)
         {
             Style = s;
             Label = name;
             Value = 0;
             Offset = offset;
         }
-        public Vertex(VertexBorderStyle s, string name, Coord offset, IEnumerable<Edge> i) : this(s, name, offset)
+        public Vertex(VertexToolInfo s, string name, Coord offset, IEnumerable<Edge> i) : this(s, name, offset)
         {
             _incident = new HashSet<Edge>(i);
         }
