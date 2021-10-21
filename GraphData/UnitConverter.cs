@@ -4,7 +4,7 @@
     {
         public static readonly float ST_PX = 1;
         public static readonly float ST_IN = 96;
-        public static readonly float ST_MM = 2438.4f;
+        public static readonly float ST_MM = 96 / 25.4f; //96 px per inch, divided by 25.4 mm per inch == px per mm
 
         public static float PxToIn(float px) => px / ST_IN;
         public static float PxToMm(float px) => px / ST_MM;

@@ -83,6 +83,7 @@ namespace TikzGraphGen
         public GeneralCommand Undo; //
         public GeneralCommand Redo; //
         public GeneralCommand DisplayHistory; //
+        public GeneralCommand DeleteSelected; //
         public GeneralCommand Cut; //
         public GeneralCommand Copy; //
         public GeneralCommand Paste; //
@@ -96,7 +97,8 @@ namespace TikzGraphGen
         public GeneralCommand ToggleBorder; //
         public GeneralCommand ToggleFullscreen; //
         public GeneralCommand ToggleAngleSnap; //
-        public GeneralCommand ToggleUnitSnap; 
+        public GeneralCommand ToggleUnitSnap; //
+        public GeneralCommand ToggleGridUnitSnap; //
         public GeneralCommand ToggleUnitGrid; //
         public GeneralCommand ToggleMenu; //
         public GeneralCommand ToggleTools; //

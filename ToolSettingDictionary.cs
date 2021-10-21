@@ -6,7 +6,8 @@
 
         public struct VertexToolInfo //TODO: Add tool data to these structs
         {
-
+            public float XRadius { get; set; }
+            public float YRadius { get; set; }
         }
         public struct EdgeToolInfo
         {
@@ -84,7 +85,8 @@
 
         private void InitializeDefaultVertex()
         {
-
+            VertexInfo.XRadius = 20f;
+            VertexInfo.YRadius = 20f;
         }
         private void InitializeDefaultEdge()
         {
@@ -100,7 +102,7 @@
         }
         private void InitializeDefaultEraser()
         {
-            EraserInfo.Radius = 50;
+            EraserInfo.Radius = 20;
         }
         private void InitializeDefaultTransform()
         {

@@ -20,7 +20,7 @@ namespace TikzGraphGen
         public Vertex(GraphInfo settings, Coord offset)
         {
             Style = settings.defaultBorders;
-            Label = settings.vertexCount.ToString();
+            Label = offset.ToString();
             Value = 0;
             _incident = new HashSet<Edge>();
             Offset = offset;

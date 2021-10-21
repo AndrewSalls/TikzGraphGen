@@ -110,7 +110,15 @@ namespace TikzGraphGen.Visualization
         {
             ToolStripMenuItem edit = new("&Edit");
 
-            ToolStripMenuItem init = new("Undo")
+            ToolStripMenuItem init = new("Delete")
+            {
+                ShortcutKeys = Keys.Delete,
+                ShowShortcutKeys = true
+            };
+            init.Click += (o, e) => _rsc.DeleteSelected();
+            edit.DropDownItems.Add(init);
+                
+            init = new("Undo")
             {
                 ShortcutKeys = Keys.Control | Keys.Z,
                 ShowShortcutKeys = true
@@ -245,18 +253,42 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.ToggleFullscreen();
             view.DropDownItems.Add(init);
 
+            init = new("Angle Snap") //(snap to every 15%, toggle)
+            {
+                ShortcutKeys = Keys.Control | Keys.Alt | Keys.A,
+                ShowShortcutKeys = true,
+                Checked = true,
+                CheckOnClick = true
+            };
+            init.Click += (o, e) => _rsc.ToggleAngleSnap();
+            view.DropDownItems.Add(init);
+
             init = new("Snap To Unit") //(on by default, attempts to make new lines/vertices along increments (i.e. every new vertex is 10mm apart))
             {
-                ShortcutKeys = Keys.Control | Keys.U,
-                ShowShortcutKeys = true
+                ShortcutKeys = Keys.Control | Keys.Shift | Keys.I,
+                ShowShortcutKeys = true,
+                Checked = false,
+                CheckOnClick = true
             };
             init.Click += (o, e) => _rsc.ToggleUnitSnap();
+            view.DropDownItems.Add(init);
+
+            init = new("Snap To Unit Grid")
+            {
+                ShortcutKeys = Keys.Control | Keys.U,
+                ShowShortcutKeys = true,
+                Checked = false,
+                CheckOnClick = true
+            };
+            init.Click += (o, e) => _rsc.ToggleGridUnitSnap();
             view.DropDownItems.Add(init);
 
             init = new("Show Unit Grid")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.U,
-                ShowShortcutKeys = true
+                ShowShortcutKeys = true,
+                Checked = false,
+                CheckOnClick = true
             };
             init.Click += (o, e) => _rsc.ToggleUnitGrid();
             view.DropDownItems.Add(init);
@@ -266,7 +298,9 @@ namespace TikzGraphGen.Visualization
             init = new("Show Menubar")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.M,
-                ShowShortcutKeys = true
+                ShowShortcutKeys = true,
+                Checked = true,
+                CheckOnClick = true
             };
             init.Click += (o, e) => _rsc.ToggleMenu();
             view.DropDownItems.Add(init);
@@ -274,7 +308,9 @@ namespace TikzGraphGen.Visualization
             init = new("Show Toolbar")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.T,
-                ShowShortcutKeys = true
+                ShowShortcutKeys = true,
+                Checked = true,
+                CheckOnClick = true
             };
             init.Click += (o, e) => _rsc.ToggleTools();
             view.DropDownItems.Add(init);
@@ -354,6 +390,7 @@ namespace TikzGraphGen.Visualization
             tool.DropDownItems.Add(init);
             init = (ToolStripMenuItem)init.DropDownItems[0];
             init.Checked = true;
+            init.CheckOnClick = true;
             init.ShortcutKeys = Keys.Control | Keys.Shift | Keys.L;
             init.ShowShortcutKeys = true;
             init.Click += (o, e) => _rsc.ToggleAngleSnap();
@@ -375,12 +412,9 @@ namespace TikzGraphGen.Visualization
             init.DropDownItems.AddRange(new ToolStripItem[] {
                 new ToolStripMenuItem("Rotate"),
                 new ToolStripMenuItem("Move"),
-                new ToolStripMenuItem("Resize"),
-                new ToolStripSeparator(),
-                new ToolStripMenuItem("Angle Snap") //(snap to every 15%, toggle)
+                new ToolStripMenuItem("Resize")
             });
             ((ToolStripMenuItem)init.DropDownItems[1]).Checked = true;
-            ((ToolStripMenuItem)init.DropDownItems[4]).Checked = true;
             tool.DropDownItems.Add(init);
 
             init = new("Select")

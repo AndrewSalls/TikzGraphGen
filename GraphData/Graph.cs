@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using TikzGraphGen.GraphData;
@@ -17,9 +18,6 @@ namespace TikzGraphGen
         public Color defaultBGColor;
         public VertexBorderStyle defaultBorders;
         public EdgeLineStyle defaultLines;
-
-        public int vertexCount;
-        public int edgeCount;
     }
 
     public class Graph
@@ -54,18 +52,19 @@ namespace TikzGraphGen
             return _vertices.Count + _edges.Count == 0;
         }
 
-        public void CreateVertex(Coord position, bool undoing = false) //TODO: For this and AddVertex, adjust all vertices if necessary so that resulting graph is contained within (0, 0) to (x, y), with the minimal X and Y of any vertex being 0. Also needs to adjust DrawingWindow position so that graph stays in same position
+        public Vertex CreateVertex(Coord position, bool undoing = false) //TODO: For this and AddVertex, adjust all vertices if necessary so that resulting graph is contained within (0, 0) to (x, y), with the minimal X and Y of any vertex being 0. Also needs to adjust DrawingWindow position so that graph stays in same position
         {
             Vertex output = new(_info, position);
             _vertices.Add(output);
-            _info.vertexCount++;
+
             if (!undoing)
                 AddHistoryUpdate(new VertexEditData(output, EditDataQuantifier.Add));
+
+            return output;
         }
         public void AddVertex(Vertex toAdd, bool undoing = false)
         {
             _vertices.Add(toAdd);
-            _info.vertexCount++;
             if (!undoing)
                 AddHistoryUpdate(new VertexEditData(toAdd, EditDataQuantifier.Add));
         }
@@ -74,16 +73,18 @@ namespace TikzGraphGen
         {
             return _vertices.ToList();
         }
-        public void CreateEdge(Vertex from, Vertex to, bool undoing = false)
+        public Edge CreateEdge(Vertex from, Vertex to, bool undoing = false)
         {
             Edge output = new(_info, from, to);
             _edges.Add(output);
             from.Connect(output);
             to.Connect(output);
             output.Connect(from, to);
-            _info.edgeCount++;
+
             if (!undoing)
                 AddHistoryUpdate(new EdgeEditData(output, EditDataQuantifier.Add));
+
+            return output;
         }
         public void AddEdge(Vertex from, Vertex to, Edge toAdd, bool undoing = false)
         {
@@ -91,7 +92,6 @@ namespace TikzGraphGen
             from.Connect(toAdd);
             to.Connect(toAdd);
             toAdd.Connect(from, to);
-            _info.edgeCount++;
             if (!undoing)
                 AddHistoryUpdate(new EdgeEditData(toAdd, EditDataQuantifier.Add));
         }
@@ -106,7 +106,6 @@ namespace TikzGraphGen
         public void AddConnectedEdge(Edge toAdd, bool undoing = false)
         {
             _edges.Add(toAdd);
-            _info.edgeCount++;
             if (!undoing)
                 AddHistoryUpdate(new EdgeEditData(toAdd, EditDataQuantifier.Add));
         }
@@ -116,14 +115,12 @@ namespace TikzGraphGen
             Graph removedSub = new(_info);
 
             _vertices.Remove(toRemove);
-            _info.vertexCount--;
             if (!undoing)
                 removedSub.AddVertex(toRemove);
             foreach(Edge e in _edges.Where(e => e.IsIncidentTo(toRemove)))
             {
                 _edges.Remove(e);
                 _vertices.First(v => v.IsIncidentTo(e)).Disconnect(e);
-                _info.edgeCount--;
                 if (!undoing)
                     removedSub.AddConnectedEdge(e);
             }
@@ -135,7 +132,6 @@ namespace TikzGraphGen
         {
             _edges.Remove(toRemove);
             toRemove.Disconnect();
-            _info.edgeCount--;
             if (!undoing)
                 AddHistoryUpdate(new EdgeEditData(toRemove, EditDataQuantifier.Remove));
         }
@@ -270,10 +266,88 @@ namespace TikzGraphGen
 
             return output;
         }
+        public Graph GetSubgraphTouchingCircle(Coord center, float radius)
+        {
+            Graph output = new(_info);
+            foreach (Vertex v in _vertices)
+            {
+                bool touching = false;
+                switch(v.Style.Style)
+                {
+                    case VertexBorderStyle.BorderStyle.Circle:
+                    case VertexBorderStyle.BorderStyle.CircleSplit:
+                    case VertexBorderStyle.BorderStyle.NoSign:
+                        touching = Math.Sqrt(Math.Pow(center.X - v.Offset.X, 2) + Math.Pow(center.Y - v.Offset.Y, 2)) <= radius + v.Style.Radius;
+                        break;
+                    case VertexBorderStyle.BorderStyle.Ellipse:
+                        //Edge Intersection
+                        float ar = v.Style.OblongWidth, br = v.Style.OblongHeight;
+                        float a = (br*br) / (2 * v.Offset.Y * ar*ar) - 1 / (2 * v.Offset.Y);
+                        float b = (br*br * v.Offset.X) / (ar*ar * v.Offset.Y);
+                        float c = (br*br * v.Offset.X*v.Offset.X) / (2 * ar*ar * v.Offset.Y) + (radius*radius) / (2 * v.Offset.Y) + v.Offset.Y / 2 - (br*br) / (2 * v.Offset.Y);
+                        touching = HasRealRoots(a*a, 2 * a * b, b*b + 1, 2 * b * c, c*c - radius*radius);
+                        //One shape entirely contains other
+                        touching |= Coord.DistanceFrom(center, v.Offset) <= radius;
+                        float angle = Coord.AngleBetween(v.Offset, center);
+                        touching |= Coord.DistanceFrom(v.Offset, center) <= ar * br / MathF.Sqrt(ar*ar*MathF.Pow(MathF.Sin(angle), 2) + br*br*MathF.Pow(MathF.Cos(angle), 2));
+                        break;
+                    case VertexBorderStyle.BorderStyle.Rectangle:
+                        touching = (v.Offset.X + (v.Style.OblongWidth / 2) >= center.X - radius) &&
+                                   (v.Offset.X - (v.Style.OblongWidth / 2) <= center.X + radius) &&
+                                   (v.Offset.Y + (v.Style.OblongHeight / 2) >= center.Y - radius) &&
+                                   (v.Offset.Y - (v.Style.OblongHeight / 2) <= center.Y + radius);
+                        break;
+                    default:
+                        throw new NotImplementedException();
+                }
+
+                if(touching)
+                {
+                    output.AddVertex(v, true);
+                    v.ViewEdges().Distinct().ToList().ForEach(e => output.AddConnectedEdge(e, true)); //TODO: Account for case where vertex is on edge of area, and edge goes further outwards so it isn't in area
+                }
+            }
+
+            return output;
+        }
+
+        private static bool HasRealRoots(float a, float b, float c, float d, float e)
+        {
+            float s1 = 2 * c * c * c - 9 * b * c * d + 27 * (a * d * d + b * b * e) - 72 * a * c * e,
+                  q1 = c * c - 3 * b * d + 12 * a * e,
+                  discrim1 = -4 * q1 * q1 * q1 + s1 * s1;
+            if (discrim1 > 0)
+            {
+                float s2 = s1 + MathF.Sqrt(discrim1),
+                      q2 = MathF.Pow(s2 / 2, 1/3f),
+                      s3 = q1 / (3 * a * q2) + q2 / (3 * a),
+                      discrim2 = (b * b) / (4 * a * a) - (2 * c) / (3 * a) + s3;
+                if (discrim2 > 0)
+                {
+                    float s5 = (b * b) / (2 * a * a) - (4 * c) / (3 * a) - s3,
+                          s6 = (-(b * b * b) / (a * a * a) + (4 * b * c) / (a * a) - (8 * d) / a) / (4 * MathF.Sqrt(discrim2)),
+                          discrim3 = s5 - s6,
+                          discrim4 = s5 + s6;
+                    if (discrim3 < 0 && discrim4 < 0)
+                        return false;
+
+                    return false;
+                }
+            }
+
+            return false;
+        }
+            public Vertex GetPointClosestTo(Coord pos)
+        {
+            if (_vertices.Count == 0)
+                return null;
+
+            return _vertices.Aggregate((a, b) => Coord.DistanceFrom(pos, a.Offset) <= Coord.DistanceFrom(pos, b.Offset) ? a : b);
+        }
 
         public override string ToString()
         {
-            return $"Vertices: {_info.vertexCount} | Edges: {_info.edgeCount}\nConnections: {_edges.Aggregate("", (e, s) => $"{s}\n{e}")}";
+            return $"Vertices: {_vertices.Count} | Edges: {_edges.Count}\nConnections:\n {_edges.Aggregate("", (e, s) => $"{s}\n{e}")}";
         }
     }
 }
