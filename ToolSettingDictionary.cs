@@ -12,6 +12,7 @@ namespace TikzGraphGen
         {
             public VertexBorderStyle.BorderStyle Style { get; set; }
             public Color BorderColor { get; set; }
+            public Color FillColor { get; set; }
             public float Thickness { get; set; }
             public int PolyCount { get; set; }
             public float Radius { get; set; }
@@ -105,6 +106,7 @@ namespace TikzGraphGen
         {
             VertexInfo.Style = VertexBorderStyle.BorderStyle.Circle;
             VertexInfo.BorderColor = Color.Black;
+            VertexInfo.FillColor = Color.White;
             VertexInfo.Thickness = 1;
             VertexInfo.PolyCount = 0;
             VertexInfo.Radius = 10f;

@@ -23,8 +23,10 @@ namespace TikzGraphGen.Visualization
 
         public static readonly Color DRAWING_BACKGROUND_COLOR = Color.White;
 
-        public static readonly double DRAG_SENSITIVITY = 8.0; //distance before dragging is recognized, in pixels
-        public static readonly Color ERASER_HIGHLIGHT_COLOR = Color.FromArgb(155, 200, 200, 200);
+        public static readonly float DRAG_SENSITIVITY = 8.0f; //distance before dragging is recognized, in pixels
+        public static readonly Color ACTION_HIGHLIGHT_COLOR = Color.FromArgb(155, 200, 200, 200);
+        public static readonly Color SELECTED_HIGHLIGHT_COLOR = Color.FromArgb(155, 172, 206, 247);
+        public static readonly float HIGHLIGHT_WIDTH = 2f;
         public static readonly float MAX_ANGLE_LINK = 4.0f;
 
         public static readonly ToolSettingDictionary DEFAULT_GRAPH_SETTINGS = new();
@@ -34,8 +36,6 @@ namespace TikzGraphGen.Visualization
         private Graph _selectedSubgraph;
         private Graph _subgraphCopy;
 
-        //private int _fixedZoomLevel;
-        //private float _variableZoom;
         private Coord _visibleCorner;
         private Point? _mouseDownPos;
         private Point _mouseDragPos;
@@ -57,8 +57,6 @@ namespace TikzGraphGen.Visualization
             _rsc = rsc;
             _selectedSubgraph = null;
             _subgraphCopy = null;
-            //_fixedZoomLevel = 5;
-            //_variableZoom = 1;
             _visibleCorner = new Coord(0, 0);
 
             _drawBorder = true;
@@ -103,7 +101,7 @@ namespace TikzGraphGen.Visualization
             _rsc.ToggleUnitSnap = () => { _unitSnap = !_unitSnap; if (_gridUnitSnap && _unitSnap) _rsc.ToggleGridUnitSnap(); else Refresh(); };
             _rsc.ToggleGridUnitSnap = () => { _gridUnitSnap = !_gridUnitSnap; if (_gridUnitSnap && _unitSnap) _rsc.ToggleUnitSnap(); else Refresh(); };
             _rsc.ToggleUnitGrid = () => { _drawUnitGrid = !_drawUnitGrid; Refresh(); };
-            _rsc.SelectAll = () => _selectedSubgraph = _graph;
+            _rsc.SelectAll = () => { _selectedSubgraph = _graph; Refresh(); };
         }
 
         public bool HasUnsavedChanges()
@@ -219,59 +217,94 @@ namespace TikzGraphGen.Visualization
             base.OnPaint(e);
 
             Graph sub = _graph.GetSubgraphWithin(_visibleCorner, (ClientRectangle.Width + _visibleCorner.X), (ClientRectangle.Height + _visibleCorner.Y));
-            Coord mouseGraphPos = _visibleCorner + _mouseDragPos;
 
             //TODO: Draw border and/or unit grid here
 
-            if (!sub.IsEmpty())
+            Graph selectedSub = _selectedSubgraph?.GetSubgraphWithin(_visibleCorner, (ClientRectangle.Width + _visibleCorner.X), (ClientRectangle.Height + _visibleCorner.Y));
+            if (selectedSub != null && !selectedSub.IsEmpty())
             {
+                foreach (Edge eg in selectedSub.ViewEdges())
+                    DrawHighlightedEdge(e.Graphics, eg, eg.ViewSource().Offset - _visibleCorner, eg.ViewDestination().Offset - _visibleCorner);
+
+                foreach (Vertex v in selectedSub.ViewVertices())
+                    DrawHighlightedVertex(e.Graphics, v, v.Offset - _visibleCorner);
+            }
+
+            if (!sub.IsEmpty())
+                foreach (Edge eg in sub.ViewEdges())
+                    DrawEdge(e.Graphics, eg, eg.ViewSource().Offset - _visibleCorner, eg.ViewDestination().Offset - _visibleCorner);
+
+            PreVertexPaint(e);
+
+            if (!sub.IsEmpty())
                 foreach (Vertex v in sub.ViewVertices())
                     DrawVertex(e.Graphics, v, v.Offset - _visibleCorner);
 
-                foreach(Edge eg in sub.ViewEdges())
-                    DrawEdge(e.Graphics, eg, eg.ViewSource().Offset - _visibleCorner, eg.ViewDestination().Offset - _visibleCorner);
-            }
+            PostVertexPaint(e);
+        }
+
+        private void PreVertexPaint(PaintEventArgs e)
+        {
             switch(_rsc.CurrentTool)
             {
+                case SelectedTool.Edge:
+                    if (_isDragging && _firstVertex != null)
+                        DrawEdge(e.Graphics, new Edge(_rsc.ToolInfo.EdgeInfo, null, null), _firstVertex.Offset, _mouseDragPos);
+                    break;
+                case SelectedTool.Select:
+                    if (_selectedSubgraph != null && _isDragging)
+                        foreach (Edge eg in _selectedSubgraph.ViewEdges())
+                            DrawEdge(e.Graphics, eg, eg.ViewSource().Offset - _visibleCorner, eg.ViewDestination().Offset - _visibleCorner);
+                    break;
                 case SelectedTool.Vertex:
+                case SelectedTool.Eraser:
+                case SelectedTool.AreaSelect:
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+        private void PostVertexPaint(PaintEventArgs e)
+        {
+            switch (_rsc.CurrentTool)
+            {
+                case SelectedTool.Vertex:
+                    Coord mouseGraphPos = _visibleCorner + _mouseDragPos;
                     if ((_unitSnap || _angleSnap || _gridUnitSnap))
                     {
                         Coord center = FindVertexRepositioning(new Coord(mouseGraphPos.X, mouseGraphPos.Y));
 
                         if (!center.Equals(mouseGraphPos) || _graph.GetPointClosestTo(mouseGraphPos) != null && Coord.DistanceFrom(mouseGraphPos, _graph.GetPointClosestTo(mouseGraphPos).Offset) <= MAX_ANGLE_LINK * _unitSize)
                         {
-                            e.Graphics.FillEllipse(new SolidBrush(ERASER_HIGHLIGHT_COLOR), center.X - _rsc.ToolInfo.VertexInfo.Radius - _rsc.ToolInfo.VertexInfo.XRadius, center.Y - _rsc.ToolInfo.VertexInfo.Radius - _rsc.ToolInfo.VertexInfo.YRadius, 2 * _rsc.ToolInfo.VertexInfo.Radius + 2 * _rsc.ToolInfo.VertexInfo.XRadius, 2 * _rsc.ToolInfo.VertexInfo.Radius + 2 * _rsc.ToolInfo.VertexInfo.YRadius);
+                            e.Graphics.FillEllipse(new SolidBrush(ACTION_HIGHLIGHT_COLOR), center.X - _rsc.ToolInfo.VertexInfo.Radius - _rsc.ToolInfo.VertexInfo.XRadius, center.Y - _rsc.ToolInfo.VertexInfo.Radius - _rsc.ToolInfo.VertexInfo.YRadius, 2 * _rsc.ToolInfo.VertexInfo.Radius + 2 * _rsc.ToolInfo.VertexInfo.XRadius, 2 * _rsc.ToolInfo.VertexInfo.Radius + 2 * _rsc.ToolInfo.VertexInfo.YRadius);
                             Coord origin = _graph.GetPointClosestTo(mouseGraphPos)?.Offset;
                             if (!_gridUnitSnap && _unitSnap && origin != null)
                             {
                                 for (float dist = 0; dist <= MAX_ANGLE_LINK * _unitSize; dist += _unitSize)
-                                    e.Graphics.DrawEllipse(new Pen(new SolidBrush(ERASER_HIGHLIGHT_COLOR)), origin.X - dist, origin.Y - dist, 2 * dist, 2 * dist);
+                                    e.Graphics.DrawEllipse(new Pen(new SolidBrush(ACTION_HIGHLIGHT_COLOR)), origin.X - dist, origin.Y - dist, 2 * dist, 2 * dist);
                             }
                             if (!_gridUnitSnap && _angleSnap && origin != null)
                             {
                                 for (float sum = 0; sum <= 2 * MathF.PI; sum += _angleSnapAmt)
-                                    e.Graphics.DrawLine(new Pen(new SolidBrush(ERASER_HIGHLIGHT_COLOR)), origin, origin + (MAX_ANGLE_LINK * _unitSize) * new Coord(MathF.Cos(sum), MathF.Sin(sum)));
+                                    e.Graphics.DrawLine(new Pen(new SolidBrush(ACTION_HIGHLIGHT_COLOR)), origin, origin + (MAX_ANGLE_LINK * _unitSize) * new Coord(MathF.Cos(sum), MathF.Sin(sum)));
                             }
                         }
                     }
                     break;
                 case SelectedTool.Edge:
-                    if (_isDragging && _firstVertex != null)
-                        DrawEdge(e.Graphics, new Edge(_rsc.ToolInfo.EdgeInfo, null, null), _firstVertex.Offset, _mouseDragPos);
                     break;
                 case SelectedTool.Eraser:
                     if (_isDragging)
-                        e.Graphics.FillEllipse(new SolidBrush(ERASER_HIGHLIGHT_COLOR), ((Coord)_mouseDragPos).X - _rsc.ToolInfo.EraserInfo.Radius, ((Coord)_mouseDragPos).Y - _rsc.ToolInfo.EraserInfo.Radius, 2 * _rsc.ToolInfo.EraserInfo.Radius, 2 * _rsc.ToolInfo.EraserInfo.Radius);
+                        e.Graphics.FillEllipse(new SolidBrush(ACTION_HIGHLIGHT_COLOR), ((Coord)_mouseDragPos).X - _rsc.ToolInfo.EraserInfo.Radius, ((Coord)_mouseDragPos).Y - _rsc.ToolInfo.EraserInfo.Radius, 2 * _rsc.ToolInfo.EraserInfo.Radius, 2 * _rsc.ToolInfo.EraserInfo.Radius);
                     break;
                 case SelectedTool.Select:
-                    if(_selectedSubgraph != null && _isDragging)
-                    {
+                    if (_selectedSubgraph != null && _isDragging)
                         foreach (Vertex v in _selectedSubgraph.ViewVertices())
                             DrawVertex(e.Graphics, v, v.Offset - _visibleCorner);
-
-                        foreach (Edge eg in _selectedSubgraph.ViewEdges())
-                            DrawEdge(e.Graphics, eg, eg.ViewSource().Offset - _visibleCorner, eg.ViewDestination().Offset - _visibleCorner);
-                    }
+                    break;
+                case SelectedTool.AreaSelect:
+                    if (_isDragging)
+                        e.Graphics.FillRectangle(new SolidBrush(ACTION_HIGHLIGHT_COLOR), ((Point)_mouseDownPos).X, ((Point)_mouseDownPos).Y, _mouseDragPos.X - ((Point)_mouseDownPos).X, _mouseDragPos.Y - ((Point)_mouseDownPos).Y);
                     break;
                 default:
                     throw new NotImplementedException();
@@ -283,6 +316,7 @@ namespace TikzGraphGen.Visualization
             switch (v.Style.Style)
             {
                 case VertexBorderStyle.BorderStyle.Circle:
+                    g.FillEllipse(new SolidBrush(v.Style.FillColor), pos.X - v.Style.Radius, pos.Y - v.Style.Radius, 2 * v.Style.Radius, 2 * v.Style.Radius);
                     g.DrawEllipse(new Pen(new SolidBrush(v.Style.BorderColor), v.Style.Thickness), pos.X - v.Style.Radius, pos.Y - v.Style.Radius, 2 * v.Style.Radius, 2 * v.Style.Radius);
                     break;
                 case VertexBorderStyle.BorderStyle.None:
@@ -290,6 +324,10 @@ namespace TikzGraphGen.Visualization
                 default:
                     throw new NotImplementedException();
             }
+        }
+        private static void DrawHighlightedVertex(Graphics g, Vertex v, Coord pos)
+        {
+            g.FillEllipse(new SolidBrush(SELECTED_HIGHLIGHT_COLOR), pos.X - v.Style.Radius - HIGHLIGHT_WIDTH, pos.Y - v.Style.Radius - HIGHLIGHT_WIDTH, 2 * v.Style.Radius + 2 * HIGHLIGHT_WIDTH, 2 * v.Style.Radius + 2 * HIGHLIGHT_WIDTH);
         }
         private static void DrawEdge(Graphics g, Edge e, Coord start, Coord end)
         {
@@ -313,6 +351,22 @@ namespace TikzGraphGen.Visualization
                 EdgeLineStyle.LineStyle.None => new Pen(Color.Transparent),
                 _ => throw new NotImplementedException(),
             };
+            switch (e) //TODO: Draw bent/curved edge
+            {
+                case BentEdge _:
+                    throw new NotImplementedException();
+                case CurvedEdge _:
+                    throw new NotImplementedException();
+                case Edge _:
+                    g.DrawLine(p, start.X, start.Y, end.X, end.Y);
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+        private static void DrawHighlightedEdge(Graphics g, Edge e, Coord start, Coord end)
+        {
+            Pen p = new(SELECTED_HIGHLIGHT_COLOR, e.Style.Thickness + 2 * HIGHLIGHT_WIDTH);
             switch (e) //TODO: Draw bent/curved edge
             {
                 case BentEdge _:
@@ -369,6 +423,8 @@ namespace TikzGraphGen.Visualization
                 case SelectedTool.Select:
                     if(!_isDragging)
                         _selectedSubgraph = _graph.GetSubgraphTouchingCircle(_visibleCorner + mousePos, 1); //Very small selector to try and only select what is directly clicked on
+                    break;
+                case SelectedTool.AreaSelect:
                     break;
                 default:
                     throw new NotImplementedException();
@@ -447,10 +503,15 @@ namespace TikzGraphGen.Visualization
                 case SelectedTool.Select:
                     if (!_isDragging)
                     {
-                        _selectedSubgraph = _graph.GetSubgraphTouchingCircle(_mouseDownPos, 1); //Very small selector to try and only click what is directly clicked on
+                        //Only sets subgraph if the selected subgraph is not being clicked
+                        if (_selectedSubgraph == null || _selectedSubgraph.GetSubgraphTouchingCircle(_mouseDownPos, 1).IsEmpty())
+                            _selectedSubgraph = _graph.GetSubgraphTouchingCircle(_mouseDownPos, 1); //Very small selector to try and only click what is directly clicked on
+                        
                         _graph.RemoveSubgraph(_selectedSubgraph, true);
                     }
                     _selectedSubgraph.Translate(mousePos - _mouseDragPos);
+                    break;
+                case SelectedTool.AreaSelect:
                     break;
                 default:
                     throw new NotImplementedException();
@@ -475,6 +536,11 @@ namespace TikzGraphGen.Visualization
                     break;
                 case SelectedTool.Select:
                     _graph.AddSubgraph(_selectedSubgraph, true);
+                    break;
+                case SelectedTool.AreaSelect:
+                    Coord tlCorner = new(MathF.Min(((Point)_mouseDownPos).X, _mouseDragPos.X), MathF.Min(((Point)_mouseDownPos).Y, _mouseDragPos.Y));
+                    Coord brCorner = new(MathF.Max(((Point)_mouseDownPos).X, _mouseDragPos.X), MathF.Max(((Point)_mouseDownPos).Y, _mouseDragPos.Y));
+                    _selectedSubgraph = _graph.GetSubgraphWithin(tlCorner, brCorner.X - tlCorner.X, brCorner.Y - tlCorner.Y);
                     break;
                 default:
                     throw new NotImplementedException();

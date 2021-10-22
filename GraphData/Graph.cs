@@ -194,7 +194,7 @@ namespace TikzGraphGen
                    v.Offset.Y + v.Style.Radius + (v.Style.XRadius / 2) <= visibleCorner.Y + height)
                 {
                     output.AddVertex(v, true);
-                    v.ViewEdges().Distinct().ToList().ForEach(e => output.AddConnectedEdge(e, true)); //TODO: Account for case where vertex is on edge of area, and edge goes further outwards so it isn't in area
+                    v.ViewEdges().Distinct().ToList().ForEach(e => output.AddConnectedEdge(e, true));
                 }       
             }
 
