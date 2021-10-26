@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using TikzGraphGen.GraphData;
 using static TikzGraphGen.ToolSettingDictionary;
@@ -51,9 +50,10 @@ namespace TikzGraphGen
         {
             return _vertices.ToList();
         }
-        public Edge CreateEdge(Vertex from, Vertex to, EdgeToolInfo settings, bool undoing = false)
+        public Edge CreateEdge(Vertex from, Vertex to, EdgeToolInfo edgeSettings, EdgeCapToolInfo capSettings, bool undoing = false)
         {
-            Edge output = new(settings, from, to);
+            capSettings.Style = EdgeLineStyle.EdgeCapShape.None;
+            Edge output = new(edgeSettings, capSettings, from, to);
             _edges.Add(output);
             from.Connect(output);
             to.Connect(output);

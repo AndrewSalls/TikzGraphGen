@@ -24,10 +24,12 @@ namespace TikzGraphGen.GraphData
         public static Coord operator -(Coord c1, Coord c2) => new(c1.X - c2.X, c1.Y - c2.Y);
         public static Coord operator *(Coord c, float f) => new(c.X * f, c.Y * f);
         public static Coord operator *(float f, Coord c) => new(c.X * f, c.Y * f);
+        public static Coord operator /(Coord c, float f) => new(c.X / f, c.Y / f);
 
         public static implicit operator Coord((float x, float y) c) => new(c.x, c.y);
         public static implicit operator Coord((double x, double y) c) => new((float)c.x, (float)c.y);
         public static implicit operator Coord(System.Drawing.Point p) => new(p.X, p.Y);
+        public static implicit operator Coord(System.Drawing.PointF pf) => new(pf.X, pf.Y);
         public static implicit operator System.Drawing.PointF(Coord c) => new(c.X, c.Y);
 
         public static float DistanceFrom(Coord a, Coord b) => MathF.Sqrt(MathF.Pow(a.Y - b.Y, 2) + MathF.Pow(a.X - b.X, 2));
@@ -40,6 +42,8 @@ namespace TikzGraphGen.GraphData
             return output;
         }
 
+        public static Coord Unitize(Coord a, Coord b) => new Coord(b.X - a.X, b.Y - a.Y) / DistanceFrom(a, b);
+        public static Coord AngleUnit(float angle) => new(MathF.Cos(angle), MathF.Sin(angle));
         public override string ToString() => $"({X}, {Y})";
         public override bool Equals(object obj) => (obj is Coord c) && c.X == X && c.Y == Y;
         public bool Equalish(object obj) => (obj is Coord c) && MathF.Abs(c.X - X) < MAX_ERROR && MathF.Abs(c.Y - Y) < MAX_ERROR;

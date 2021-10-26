@@ -1,5 +1,4 @@
 ﻿using System.Drawing;
-using System.Windows.Forms;
 using static TikzGraphGen.EdgeLineStyle;
 
 namespace TikzGraphGen
@@ -35,6 +34,8 @@ namespace TikzGraphGen
             public bool IsThick { get; set; }
             public bool IsReversed { get; set; }
             public int TriangleDegree { get; set; }
+            public float ParallelScale { get; set; }
+            public float PerpendicularScale { get; set; }
         }
         public struct LabelToolInfo
         {
@@ -110,8 +111,8 @@ namespace TikzGraphGen
             VertexInfo.Thickness = 1;
             VertexInfo.PolyCount = 0;
             VertexInfo.Radius = 10f;
-            VertexInfo.XRadius = 20f;
-            VertexInfo.YRadius = 20f;
+            VertexInfo.XRadius = 0f;
+            VertexInfo.YRadius = 0f;
         }
         private void InitializeDefaultEdge()
         {
@@ -128,7 +129,9 @@ namespace TikzGraphGen
             EdgeCapInfo.Style = EdgeCapShape.Latex;
             EdgeCapInfo.IsReversed = false;
             EdgeCapInfo.IsThick = false;
-            EdgeCapInfo.TriangleDegree = 90;
+            EdgeCapInfo.TriangleDegree = 60;
+            EdgeCapInfo.ParallelScale = 1.2f;
+            EdgeCapInfo.PerpendicularScale = 1.2f;
         }
         private void InitializeDefaultLabel()
         {

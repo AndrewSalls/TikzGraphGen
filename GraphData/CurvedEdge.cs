@@ -8,19 +8,19 @@ namespace TikzGraphGen
         public float EnterAngle { get; private set; }
         public float CurveLooseness { get; private set; }
 
-        public CurvedEdge(EdgeToolInfo settings) : base(settings)
+        public CurvedEdge(EdgeToolInfo settings, EdgeCapToolInfo capSettings) : base(settings, capSettings)
         {
             ExitAngle = 0;
             EnterAngle = 0;
             CurveLooseness = 0;
         }
-        public CurvedEdge(EdgeToolInfo settings, Vertex s, Vertex d) : base(settings, s, d)
+        public CurvedEdge(EdgeToolInfo settings, EdgeCapToolInfo capSettings, Vertex s, Vertex d) : base(settings, capSettings, s, d)
         {
             ExitAngle = 0;
             EnterAngle = 0;
             CurveLooseness = 0;
         }
-        public CurvedEdge(EdgeToolInfo e, Vertex s, Vertex d, FreeLabel label, float exitAngle, float enterAngle, float looseness) : base(e, s, d, label)
+        public CurvedEdge(EdgeToolInfo e, EdgeCapToolInfo capSettings, Vertex s, Vertex d, FreeLabel label, float exitAngle, float enterAngle, float looseness) : base(e, capSettings, s, d, label)
         {
             ExitAngle = exitAngle;
             EnterAngle = enterAngle;

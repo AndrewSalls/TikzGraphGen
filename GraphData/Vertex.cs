@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using TikzGraphGen.GraphData;
 using static TikzGraphGen.ToolSettingDictionary;
@@ -59,6 +60,23 @@ namespace TikzGraphGen
         public List<Edge> ViewEdges()
         {
             return _incident.ToList();
+        }
+
+        public float GetAngularRadius(float angle)
+        {
+            switch(Style.Style)
+            {
+                case VertexBorderStyle.BorderStyle.Circle:
+                case VertexBorderStyle.BorderStyle.CircleSplit:
+                case VertexBorderStyle.BorderStyle.NoSign:
+                    return Style.Radius;
+                case VertexBorderStyle.BorderStyle.Ellipse:
+                    return Style.XRadius * Style.YRadius / MathF.Sqrt(Style.XRadius*Style.XRadius * MathF.Sin(angle) * MathF.Sin(angle) + Style.YRadius*Style.YRadius * MathF.Cos(angle)*MathF.Cos(angle));
+                case VertexBorderStyle.BorderStyle.None:
+                    return 0;
+                default:
+                    throw new NotImplementedException();
+            }
         }
 
         public override string ToString()

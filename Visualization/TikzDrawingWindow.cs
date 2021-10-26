@@ -5,6 +5,7 @@ using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
 using TikzGraphGen.GraphData;
+using static TikzGraphGen.ToolSettingDictionary;
 
 namespace TikzGraphGen.Visualization
 {
@@ -26,7 +27,7 @@ namespace TikzGraphGen.Visualization
         public static readonly float DRAG_SENSITIVITY = 8.0f; //distance before dragging is recognized, in pixels
         public static readonly Color ACTION_HIGHLIGHT_COLOR = Color.FromArgb(155, 200, 200, 200);
         public static readonly Color SELECTED_HIGHLIGHT_COLOR = Color.FromArgb(155, 172, 206, 247);
-        public static readonly float HIGHLIGHT_WIDTH = 2f;
+        public static readonly float HIGHLIGHT_WIDTH = 3f;
         public static readonly float MAX_ANGLE_LINK = 4.0f;
 
         public static readonly ToolSettingDictionary DEFAULT_GRAPH_SETTINGS = new();
@@ -87,6 +88,7 @@ namespace TikzGraphGen.Visualization
             MouseMove += TikzDrawingWindow_MouseMove;
             MouseUp += TikzDrawingWindow_MouseUp;
 
+            _rsc.CurrentToolChanged += (t) => Refresh();
             _rsc.Undo += () => _graph = Graph.Undo(_graph);
             _rsc.Redo += () => _graph = Graph.Redo(_graph);
             _rsc.DeleteSelected += () => { _graph.DeleteSubgraph(_selectedSubgraph); _selectedSubgraph = null; };
@@ -224,7 +226,7 @@ namespace TikzGraphGen.Visualization
             if (selectedSub != null && !selectedSub.IsEmpty())
             {
                 foreach (Edge eg in selectedSub.ViewEdges())
-                    DrawHighlightedEdge(e.Graphics, eg, eg.ViewSource().Offset - _visibleCorner, eg.ViewDestination().Offset - _visibleCorner);
+                    DrawHighlightedEdge(e.Graphics, eg);
 
                 foreach (Vertex v in selectedSub.ViewVertices())
                     DrawHighlightedVertex(e.Graphics, v, v.Offset - _visibleCorner);
@@ -232,7 +234,7 @@ namespace TikzGraphGen.Visualization
 
             if (!sub.IsEmpty())
                 foreach (Edge eg in sub.ViewEdges())
-                    DrawEdge(e.Graphics, eg, eg.ViewSource().Offset - _visibleCorner, eg.ViewDestination().Offset - _visibleCorner);
+                    DrawEdge(e.Graphics, eg);
 
             PreVertexPaint(e);
 
@@ -249,14 +251,21 @@ namespace TikzGraphGen.Visualization
             {
                 case SelectedTool.Edge:
                     if (_isDragging && _firstVertex != null)
-                        DrawEdge(e.Graphics, new Edge(_rsc.ToolInfo.EdgeInfo, null, null), _firstVertex.Offset, _mouseDragPos);
+                    {
+                        EdgeToolInfo edge = _rsc.ToolInfo.EdgeInfo;
+                        EdgeCapToolInfo edgeCap = _rsc.ToolInfo.EdgeCapInfo;
+                        edge.Color = ACTION_HIGHLIGHT_COLOR;
+                        edgeCap.Style = EdgeLineStyle.EdgeCapShape.None;
+                        DrawEdge(e.Graphics, new Edge(edge, edgeCap, _firstVertex, new Vertex(_rsc.ToolInfo.VertexInfo, _mouseDragPos)));
+                    }
                     break;
                 case SelectedTool.Select:
                     if (_selectedSubgraph != null && _isDragging)
                         foreach (Edge eg in _selectedSubgraph.ViewEdges())
-                            DrawEdge(e.Graphics, eg, eg.ViewSource().Offset - _visibleCorner, eg.ViewDestination().Offset - _visibleCorner);
+                            DrawEdge(e.Graphics, eg);
                     break;
                 case SelectedTool.Vertex:
+                case SelectedTool.EdgeCap:
                 case SelectedTool.Eraser:
                 case SelectedTool.AreaSelect:
                     break;
@@ -270,7 +279,7 @@ namespace TikzGraphGen.Visualization
             {
                 case SelectedTool.Vertex:
                     Coord mouseGraphPos = _visibleCorner + _mouseDragPos;
-                    if ((_unitSnap || _angleSnap || _gridUnitSnap))
+                    if (_unitSnap || _angleSnap || _gridUnitSnap)
                     {
                         Coord center = FindVertexRepositioning(new Coord(mouseGraphPos.X, mouseGraphPos.Y));
 
@@ -278,12 +287,12 @@ namespace TikzGraphGen.Visualization
                         {
                             e.Graphics.FillEllipse(new SolidBrush(ACTION_HIGHLIGHT_COLOR), center.X - _rsc.ToolInfo.VertexInfo.Radius - _rsc.ToolInfo.VertexInfo.XRadius, center.Y - _rsc.ToolInfo.VertexInfo.Radius - _rsc.ToolInfo.VertexInfo.YRadius, 2 * _rsc.ToolInfo.VertexInfo.Radius + 2 * _rsc.ToolInfo.VertexInfo.XRadius, 2 * _rsc.ToolInfo.VertexInfo.Radius + 2 * _rsc.ToolInfo.VertexInfo.YRadius);
                             Coord origin = _graph.GetPointClosestTo(mouseGraphPos)?.Offset;
-                            if (!_gridUnitSnap && _unitSnap && origin != null)
+                            if (!_gridUnitSnap && _unitSnap && origin != null) //Unit snap rendering
                             {
                                 for (float dist = 0; dist <= MAX_ANGLE_LINK * _unitSize; dist += _unitSize)
                                     e.Graphics.DrawEllipse(new Pen(new SolidBrush(ACTION_HIGHLIGHT_COLOR)), origin.X - dist, origin.Y - dist, 2 * dist, 2 * dist);
                             }
-                            if (!_gridUnitSnap && _angleSnap && origin != null)
+                            if (!_gridUnitSnap && _angleSnap && origin != null) //Angle snap rendering
                             {
                                 for (float sum = 0; sum <= 2 * MathF.PI; sum += _angleSnapAmt)
                                     e.Graphics.DrawLine(new Pen(new SolidBrush(ACTION_HIGHLIGHT_COLOR)), origin, origin + (MAX_ANGLE_LINK * _unitSize) * new Coord(MathF.Cos(sum), MathF.Sin(sum)));
@@ -292,6 +301,7 @@ namespace TikzGraphGen.Visualization
                     }
                     break;
                 case SelectedTool.Edge:
+                case SelectedTool.EdgeCap:
                     break;
                 case SelectedTool.Eraser:
                     if (_isDragging)
@@ -304,7 +314,7 @@ namespace TikzGraphGen.Visualization
                     break;
                 case SelectedTool.AreaSelect:
                     if (_isDragging)
-                        e.Graphics.FillRectangle(new SolidBrush(ACTION_HIGHLIGHT_COLOR), ((Point)_mouseDownPos).X, ((Point)_mouseDownPos).Y, _mouseDragPos.X - ((Point)_mouseDownPos).X, _mouseDragPos.Y - ((Point)_mouseDownPos).Y);
+                        e.Graphics.FillRectangle(new SolidBrush(SELECTED_HIGHLIGHT_COLOR), ((Point)_mouseDownPos).X, ((Point)_mouseDownPos).Y, _mouseDragPos.X - ((Point)_mouseDownPos).X, _mouseDragPos.Y - ((Point)_mouseDownPos).Y);
                     break;
                 default:
                     throw new NotImplementedException();
@@ -329,28 +339,29 @@ namespace TikzGraphGen.Visualization
         {
             g.FillEllipse(new SolidBrush(SELECTED_HIGHLIGHT_COLOR), pos.X - v.Style.Radius - HIGHLIGHT_WIDTH, pos.Y - v.Style.Radius - HIGHLIGHT_WIDTH, 2 * v.Style.Radius + 2 * HIGHLIGHT_WIDTH, 2 * v.Style.Radius + 2 * HIGHLIGHT_WIDTH);
         }
-        private static void DrawEdge(Graphics g, Edge e, Coord start, Coord end)
+        private void DrawEdge(Graphics g, Edge e)
         {
-            Pen p = e.Style.Style switch
+            Pen p = e.Style.LineInfo.Style switch
             {
-                EdgeLineStyle.LineStyle.Solid => new Pen(e.Style.Color, e.Style.Thickness),
-                EdgeLineStyle.LineStyle.Dash => new Pen(e.Style.Color, e.Style.Thickness)
+                EdgeLineStyle.LineStyle.Solid => new Pen(e.Style.LineInfo.Color, e.Style.LineInfo.Thickness),
+                EdgeLineStyle.LineStyle.Dash => new Pen(e.Style.LineInfo.Color, e.Style.LineInfo.Thickness)
                 {
                     DashStyle = DashStyle.Dash,
-                    Width = e.Style.Thickness,
-                    DashOffset = e.Style.PatternOffset,
-                    DashPattern = new float[] { e.Style.DashWidth, e.Style.DashSpacing }
+                    Width = e.Style.LineInfo.Thickness,
+                    DashOffset = e.Style.LineInfo.PatternOffset,
+                    DashPattern = new float[] { e.Style.LineInfo.DashWidth, e.Style.LineInfo.DashSpacing }
                 },
-                EdgeLineStyle.LineStyle.Dot => new Pen(e.Style.Color, e.Style.Thickness)
+                EdgeLineStyle.LineStyle.Dot => new Pen(e.Style.LineInfo.Color, e.Style.LineInfo.Thickness)
                 {
                     DashStyle = DashStyle.Dot,
-                    Width = e.Style.Thickness,
-                    DashOffset = e.Style.PatternOffset,
-                    DashPattern = new float[] { e.Style.DashSpacing }
+                    Width = e.Style.LineInfo.Thickness,
+                    DashOffset = e.Style.LineInfo.PatternOffset,
+                    DashPattern = new float[] { e.Style.LineInfo.DashSpacing }
                 },
                 EdgeLineStyle.LineStyle.None => new Pen(Color.Transparent),
                 _ => throw new NotImplementedException(),
             };
+
             switch (e) //TODO: Draw bent/curved edge
             {
                 case BentEdge _:
@@ -358,15 +369,20 @@ namespace TikzGraphGen.Visualization
                 case CurvedEdge _:
                     throw new NotImplementedException();
                 case Edge _:
+                    Coord start = e.GetSourceOffset() - _visibleCorner;
+                    Coord end = e.GetDestinationOffset() - _visibleCorner;
                     g.DrawLine(p, start.X, start.Y, end.X, end.Y);
                     break;
                 default:
                     throw new NotImplementedException();
             }
+
+            DrawEdgeCaps(g, e);
         }
-        private static void DrawHighlightedEdge(Graphics g, Edge e, Coord start, Coord end)
+        private void DrawHighlightedEdge(Graphics g, Edge e)
         {
-            Pen p = new(SELECTED_HIGHLIGHT_COLOR, e.Style.Thickness + 2 * HIGHLIGHT_WIDTH);
+            Pen p = new(SELECTED_HIGHLIGHT_COLOR, e.Style.LineInfo.Thickness + 2 * HIGHLIGHT_WIDTH);
+
             switch (e) //TODO: Draw bent/curved edge
             {
                 case BentEdge _:
@@ -374,7 +390,88 @@ namespace TikzGraphGen.Visualization
                 case CurvedEdge _:
                     throw new NotImplementedException();
                 case Edge _:
+                    Coord start = e.GetSourceOffset() - _visibleCorner;
+                    Coord end = e.GetDestinationOffset() - _visibleCorner;
                     g.DrawLine(p, start.X, start.Y, end.X, end.Y);
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+
+            DrawHighlightedEdgeCaps(g, e);
+        }
+
+        private void DrawEdgeCaps(Graphics g, Edge e)
+        {
+           DrawSpecificEdgeCap(g, e.GetSourceOffset(), Coord.AngleBetween(e.ViewDestination().Offset, e.ViewSource().Offset), e.Style.SDirectionCap, e.Style.LineInfo.Color, e.Style.LineInfo.Thickness, false);
+           DrawSpecificEdgeCap(g, e.GetDestinationOffset(), Coord.AngleBetween(e.ViewSource().Offset, e.ViewDestination().Offset), e.Style.DDirectionCap, e.Style.LineInfo.Color, e.Style.LineInfo.Thickness, false);
+        }
+        private void DrawHighlightedEdgeCaps(Graphics g, Edge e)
+        {
+            DrawSpecificEdgeCap(g, e.GetSourceOffset(), Coord.AngleBetween(e.ViewDestination().Offset, e.ViewSource().Offset), e.Style.SDirectionCap, SELECTED_HIGHLIGHT_COLOR, e.Style.LineInfo.Thickness, true);
+            DrawSpecificEdgeCap(g, e.GetDestinationOffset(), Coord.AngleBetween(e.ViewSource().Offset, e.ViewDestination().Offset), e.Style.DDirectionCap, SELECTED_HIGHLIGHT_COLOR, e.Style.LineInfo.Thickness, true);
+        }
+        //TODO: Modify drawing edge caps to properly follow dimensions of PGF arrow tips
+        private void DrawSpecificEdgeCap(Graphics g, Coord capEdge, float pointDirection, EdgeCapToolInfo style, Color color, float lineWidth, bool isHighlight)
+        {
+            Coord unit = Coord.AngleUnit(pointDirection);
+            Coord perpUnit = Coord.AngleUnit(pointDirection + MathF.PI / 2);
+            switch (style.Style)
+            {
+                case EdgeLineStyle.EdgeCapShape.Latex:
+                case EdgeLineStyle.EdgeCapShape.Stealth:
+                    PointF[] points = new PointF[4] {
+                        capEdge,
+                        capEdge + (style.ParallelScale * 15 * lineWidth) * unit + (style.PerpendicularScale * 5 * lineWidth) * perpUnit,
+                        capEdge + (style.ParallelScale * 10 * lineWidth) * unit,
+                        capEdge + (style.ParallelScale * 15 * lineWidth) * unit - (style.PerpendicularScale * 5 * lineWidth) * perpUnit
+                    };
+                    if (isHighlight)
+                    {
+                        points[0] -= HIGHLIGHT_WIDTH * unit;
+                        points[1] += HIGHLIGHT_WIDTH * Coord.AngleUnit((Coord.AngleBetween(points[1], capEdge) + Coord.AngleBetween(points[1], points[2])) / 2);
+                        points[3] += HIGHLIGHT_WIDTH * Coord.AngleUnit((Coord.AngleBetween(points[3], capEdge) + Coord.AngleBetween(points[3], points[2])) / 2);
+                        points[2] += HIGHLIGHT_WIDTH * unit;
+                    }
+                    g.FillPolygon(new SolidBrush(color), points);
+                    break;
+                case EdgeLineStyle.EdgeCapShape.Triangle:
+                    float baseAngle = (180 - style.TriangleDegree) * MathF.PI / 360; //Triangle is always an isoceles, so obtains one of the base side angles
+                    float baseScale = (15 * lineWidth) / MathF.Tan(baseAngle);
+                    points = new PointF[3] {
+                        capEdge,
+                        capEdge + (15 * lineWidth) * unit + baseScale * perpUnit,
+                        capEdge + (15 * lineWidth) * unit - baseScale * perpUnit
+                    };
+                    if(isHighlight)
+                    {
+                        points[0] -= HIGHLIGHT_WIDTH * unit;
+                        points[1] += HIGHLIGHT_WIDTH * Coord.AngleUnit(pointDirection + baseAngle);
+                        points[2] += HIGHLIGHT_WIDTH * Coord.AngleUnit(pointDirection - baseAngle);
+                    }
+                    g.FillPolygon(new SolidBrush(color), points);
+                    break;
+                case EdgeLineStyle.EdgeCapShape.OpenTriangle:
+                    baseAngle = (180 - style.TriangleDegree) * MathF.PI / 360; //Triangle is always an isoceles, so obtains one of the base side angles
+                    baseScale = (15 * lineWidth) / MathF.Tan(baseAngle);
+                    points = new PointF[3] {
+                        capEdge,
+                        capEdge + (15 * lineWidth) * unit + baseScale * perpUnit,
+                        capEdge + (15 * lineWidth) * unit - baseScale * perpUnit
+                    };
+                    if (isHighlight)
+                    {
+                        points[0] -= HIGHLIGHT_WIDTH * unit;
+                        points[1] += HIGHLIGHT_WIDTH * Coord.AngleUnit(pointDirection + baseAngle);
+                        points[2] += HIGHLIGHT_WIDTH * Coord.AngleUnit(pointDirection - baseAngle);
+                    }
+                    g.DrawPolygon(new Pen(new SolidBrush(color), lineWidth), points);
+                    break;
+                case EdgeLineStyle.EdgeCapShape.Circle:
+                    g.FillEllipse(new SolidBrush(color), new RectangleF(capEdge + (7.5f * lineWidth) * unit - new Coord(7.5f * lineWidth + (isHighlight ? HIGHLIGHT_WIDTH : 0), 7.5f * lineWidth + (isHighlight ? HIGHLIGHT_WIDTH : 0)), new SizeF(15 * lineWidth + (isHighlight ? 2 * HIGHLIGHT_WIDTH : 0), 15 * lineWidth + (isHighlight ? 2 * HIGHLIGHT_WIDTH : 0))));
+                    break;
+                case EdgeLineStyle.EdgeCapShape.ButtCap:
+                case EdgeLineStyle.EdgeCapShape.None:
                     break;
                 default:
                     throw new NotImplementedException();
@@ -404,15 +501,32 @@ namespace TikzGraphGen.Visualization
                         _graph.CreateVertex(FindVertexRepositioning(_visibleCorner + mousePos), _rsc.ToolInfo.VertexInfo);
                     break;
                 case SelectedTool.Edge:
-                    if(_firstVertex == null)
+                    if (_firstVertex == null)
                         _firstVertex = GetVerticesIn(_visibleCorner + mousePos).FirstOrDefault();
                     else
                     {
                         Vertex _secondVertex = GetVerticesIn(_visibleCorner + mousePos).FirstOrDefault();
                         if (_firstVertex != null && _secondVertex != null && _firstVertex != _secondVertex && !_firstVertex.IsAdjacentTo(_secondVertex)) //TODO: Make support loops & multiedges later (give warning or automatically curve lines) (A -> A)
-                            _graph.CreateEdge(_firstVertex, _secondVertex, _rsc.ToolInfo.EdgeInfo);
+                            _graph.CreateEdge(_firstVertex, _secondVertex, _rsc.ToolInfo.EdgeInfo, _rsc.ToolInfo.EdgeCapInfo);
 
                         _firstVertex = null;
+                    }
+                    break;
+                case SelectedTool.EdgeCap:
+                    List<Edge> edges = _graph.GetSubgraphTouchingCircle(mousePos, _rsc.ToolInfo.EraserInfo.Radius)?.ViewEdges();
+                    if(edges.Count > 0)
+                    {
+                        Edge ed = edges.Aggregate((close, e) => {
+                            float sourceDist = Coord.DistanceFrom(e.GetSourceOffset(), mousePos);
+                            float destinationDist = Coord.DistanceFrom(e.GetDestinationOffset(), mousePos);
+                            float sourceDistR = Coord.DistanceFrom(close.GetSourceOffset(), mousePos);
+                            float destinationDistR = Coord.DistanceFrom(close.GetDestinationOffset(), mousePos);
+                            return (sourceDist <= sourceDistR && sourceDist <= destinationDistR) || (destinationDist <= sourceDistR && destinationDist <= destinationDistR) ? e : close;
+                        });
+                        if (Coord.DistanceFrom(ed.GetSourceOffset(), mousePos) <= Coord.DistanceFrom(ed.GetDestinationOffset(), mousePos))
+                            ed.Style.SDirectionCap = _rsc.ToolInfo.EdgeCapInfo;
+                        else
+                            ed.Style.DDirectionCap = _rsc.ToolInfo.EdgeCapInfo;
                     }
                     break;
                 case SelectedTool.Eraser:
@@ -511,6 +625,7 @@ namespace TikzGraphGen.Visualization
                     }
                     _selectedSubgraph.Translate(mousePos - _mouseDragPos);
                     break;
+                case SelectedTool.EdgeCap:
                 case SelectedTool.AreaSelect:
                     break;
                 default:
@@ -526,13 +641,14 @@ namespace TikzGraphGen.Visualization
             switch (_rsc.CurrentTool)
             {
                 case SelectedTool.Vertex:
+                case SelectedTool.EdgeCap:
                 case SelectedTool.Eraser:
                     break;
                 case SelectedTool.Edge:
                     Vertex _secondVertex = GetVerticesIn(_visibleCorner + e.Location).FirstOrDefault();
 
                     if (_firstVertex != null && _secondVertex != null && _isDragging && _firstVertex != _secondVertex && !_firstVertex.IsAdjacentTo(_secondVertex)) //TODO: Make support loops & multiedges later (give warning or automatically curve lines) (A -> A)
-                        _graph.CreateEdge(_firstVertex, _secondVertex, _rsc.ToolInfo.EdgeInfo);
+                        _graph.CreateEdge(_firstVertex, _secondVertex, _rsc.ToolInfo.EdgeInfo, _rsc.ToolInfo.EdgeCapInfo);
                     break;
                 case SelectedTool.Select:
                     _graph.AddSubgraph(_selectedSubgraph, true);

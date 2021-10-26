@@ -1,33 +1,35 @@
-﻿using static TikzGraphGen.ToolSettingDictionary;
+﻿using System;
+using TikzGraphGen.GraphData;
+using static TikzGraphGen.ToolSettingDictionary;
 
 namespace TikzGraphGen
 {
     public class Edge
     {
-        public EdgeToolInfo Style { get; private set; }
+        public EdgeLineStyle Style { get; private set; }
         public FreeLabel Label { get; private set; }
         public double Value { get; private set; }
         protected Vertex _source, _destination;
 
-        public Edge(EdgeToolInfo settings)
+        public Edge(EdgeToolInfo edgeSettings, EdgeCapToolInfo capSettings)
         {
-            Style = settings;
+            Style = new EdgeLineStyle(edgeSettings, capSettings, capSettings);
             Label = null;
             Value = 0;
             _source = null;
             _destination = null;
         }
-        public Edge(EdgeToolInfo settings, Vertex s, Vertex d)
+        public Edge(EdgeToolInfo edgeSettings, EdgeCapToolInfo capSettings, Vertex s, Vertex d)
         {
-            Style = settings;
+            Style = new EdgeLineStyle(edgeSettings, capSettings, capSettings);
             Label = null;
             Value = 0;
             _source = s;
             _destination = d;
         }
-        public Edge(EdgeToolInfo e, Vertex s, Vertex d, FreeLabel label)
+        public Edge(EdgeToolInfo edgeSettings, EdgeCapToolInfo capSettings, Vertex s, Vertex d, FreeLabel label)
         {
-            Style = e;
+            Style = new EdgeLineStyle(edgeSettings, capSettings, capSettings);
             Label = label;
             Value = 0;
             _source = s;
@@ -61,6 +63,19 @@ namespace TikzGraphGen
         public Vertex ViewDestination()
         {
             return _destination;
+        }
+
+        public Coord GetSourceOffset()
+        {
+            float angle = Coord.AngleBetween(_source.Offset, _destination.Offset);
+            float startAngularRadius = _source.GetAngularRadius(angle);
+            return new(_source.Offset.X - MathF.Cos(angle) * startAngularRadius, _source.Offset.Y - MathF.Sin(angle) * startAngularRadius);
+        }
+        public Coord GetDestinationOffset()
+        {
+            float angle = Coord.AngleBetween(_source.Offset, _destination.Offset);
+            float endAngularRadius = _destination.GetAngularRadius(angle);
+            return new(_destination.Offset.X + MathF.Cos(angle) * endAngularRadius, _destination.Offset.Y + MathF.Sin(angle) * endAngularRadius);
         }
 
         public override string ToString()
