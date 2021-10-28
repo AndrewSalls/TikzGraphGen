@@ -237,14 +237,6 @@ namespace TikzGraphGen.Visualization
 
             view.DropDownItems.Add(new ToolStripSeparator());
 
-            init = new("Page Border") //(create line showing page border + margin dimensions for PDF page)
-            {
-                ShortcutKeys = Keys.Control | Keys.Alt | Keys.B,
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.ToggleBorder();
-            view.DropDownItems.Add(init);
-
             init = new("Fullscreen")
             {
                 ShortcutKeys = Keys.F11,
@@ -283,6 +275,18 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.ToggleGridUnitSnap();
             view.DropDownItems.Add(init);
 
+            view.DropDownItems.Add(new ToolStripSeparator());
+
+            init = new("Show Page Border") //(create line showing page border + margin dimensions for PDF page)
+            {
+                ShortcutKeys = Keys.Control | Keys.Alt | Keys.B,
+                ShowShortcutKeys = true,
+                Checked = false,
+                CheckOnClick = true
+            };
+            init.Click += (o, e) => _rsc.ToggleBorder();
+            view.DropDownItems.Add(init);
+
             init = new("Show Unit Grid")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.U,
@@ -292,8 +296,6 @@ namespace TikzGraphGen.Visualization
             };
             init.Click += (o, e) => _rsc.ToggleUnitGrid();
             view.DropDownItems.Add(init);
-
-            view.DropDownItems.Add(new ToolStripSeparator());
 
             init = new("Show Menubar")
             {
@@ -393,7 +395,7 @@ namespace TikzGraphGen.Visualization
             init.CheckOnClick = true;
             init.ShortcutKeys = Keys.Control | Keys.Shift | Keys.L;
             init.ShowShortcutKeys = true;
-            init.Click += (o, e) => _rsc.ToggleAngleSnap();
+            init.Click += (o, e) => _rsc.ToggleLabelEdgeSnap();
 
             init = new("Eraser")
             {

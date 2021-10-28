@@ -48,7 +48,7 @@ namespace TikzGraphGen
         public struct TransformToolInfo
         {
         }
-        public struct SelectToolInfo
+        /*public struct SelectToolInfo
         {
         }
         public struct AreaSelectToolInfo
@@ -56,7 +56,7 @@ namespace TikzGraphGen
         }
         public struct LassoToolInfo
         {
-        }
+        }*/
         public struct WeightToolInfo
         {
         }
@@ -77,9 +77,9 @@ namespace TikzGraphGen
         public LabelToolInfo LabelInfo;
         public EraserToolInfo EraserInfo;
         public TransformToolInfo TransformInfo;
-        public SelectToolInfo SelectInfo;
-        public AreaSelectToolInfo AreaSelectInfo;
-        public LassoToolInfo LassoInfo;
+        //public SelectToolInfo SelectInfo;
+        //public AreaSelectToolInfo AreaSelectInfo;
+        //public LassoToolInfo LassoInfo;
         public WeightToolInfo WeightInfo;
         public TrackerToolInfo TrackerInfo;
         public MergeToolInfo MergeInfo;
@@ -94,9 +94,9 @@ namespace TikzGraphGen
             InitializeDefaultLabel();
             InitializeDefaultEraser();
             InitializeDefaultTransform();
-            InitializeDefaultSelect();
-            InitializeDefaultAreaSelect();
-            InitializeDefaultLasso();
+            //InitializeDefaultSelect();
+            //InitializeDefaultAreaSelect();
+            //InitializeDefaultLasso();
             InitializeDefaultWeight();
             InitializeDefaultTracker();
             InitializeDefaultMerge();
@@ -145,7 +145,7 @@ namespace TikzGraphGen
         {
 
         }
-        private void InitializeDefaultSelect()
+       /* private void InitializeDefaultSelect()
         {
 
         }
@@ -156,7 +156,7 @@ namespace TikzGraphGen
         private void InitializeDefaultLasso()
         {
 
-        }
+        }*/
         private void InitializeDefaultWeight()
         {
 

@@ -100,6 +100,7 @@ namespace TikzGraphGen
         public GeneralCommand ToggleUnitSnap; //
         public GeneralCommand ToggleGridUnitSnap; //
         public GeneralCommand ToggleUnitGrid; //
+        public GeneralCommand ToggleLabelEdgeSnap; //
         public GeneralCommand ToggleMenu; //
         public GeneralCommand ToggleTools; //
         public GeneralCommand Guide; //
@@ -144,7 +145,7 @@ namespace TikzGraphGen
                 case ToolSettingDictionary.TransformToolInfo transform:
                     _toolInfo.TransformInfo = transform;
                     break;
-                case ToolSettingDictionary.SelectToolInfo select:
+                /*case ToolSettingDictionary.SelectToolInfo select:
                     _toolInfo.SelectInfo = select;
                     break;
                 case ToolSettingDictionary.AreaSelectToolInfo areaSelect:
@@ -152,7 +153,7 @@ namespace TikzGraphGen
                     break;
                 case ToolSettingDictionary.LassoToolInfo lasso:
                     _toolInfo.LassoInfo = lasso;
-                    break;
+                    break;*/
                 case ToolSettingDictionary.WeightToolInfo weight:
                     _toolInfo.WeightInfo = weight;
                     break;

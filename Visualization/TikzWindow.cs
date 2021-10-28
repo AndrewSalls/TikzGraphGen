@@ -158,8 +158,39 @@ namespace TikzGraphGen.Visualization
             _rsc.FontOptions = OpenFontWindow;
             _rsc.Preferences = OpenPreferencesWindow;
             _rsc.ToggleFullscreen = () => { if (WindowState.Equals(FormWindowState.Normal)) WindowState = FormWindowState.Maximized; else WindowState = FormWindowState.Normal; };
-            _rsc.ToggleMenu = () => _menubar.Visible = !_menubar.Visible;
-            _rsc.ToggleTools = () => _toolbar.Visible = !_toolbar.Visible;
+            _rsc.ToggleMenu = () =>
+            {
+                _menubar.Visible = !_menubar.Visible;
+                if (_menubar.Visible)
+                {
+                    _editor.Top = _menubar.Bottom;
+                    _editor.Height = ClientRectangle.Height - _menubar.Height;
+
+                    _toolbar.Top = _menubar.Bottom;
+                    _toolbar.Height = ClientRectangle.Height - _menubar.Height;
+                }
+                else
+                {
+                    _editor.Top = ClientRectangle.Top;
+                    _editor.Height = ClientRectangle.Height;
+
+                    _toolbar.Top = ClientRectangle.Top;
+                    _toolbar.Height = ClientRectangle.Height;
+                }
+            };
+            _rsc.ToggleTools = () => {
+                _toolbar.Visible = !_toolbar.Visible;
+                if (_toolbar.Visible)
+                {
+                    _editor.Left = _toolbar.Right;
+                    _editor.Width = ClientRectangle.Width - _toolbar.Width;
+                }
+                else
+                {
+                    _editor.Left = ClientRectangle.Left;
+                    _editor.Width = ClientRectangle.Width;
+                }
+            };
 
             _rsc.Guide = OpenHelpWindow;
             _rsc.About = OpenAboutWindow;

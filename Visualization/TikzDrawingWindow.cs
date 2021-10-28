@@ -7,9 +7,20 @@ using System.Windows.Forms;
 using TikzGraphGen.GraphData;
 using static TikzGraphGen.ToolSettingDictionary;
 
+//Next goals:
+//Implement Lasso
+//Implement labels for editing vertices or creating labels in space (specially modified vertices with tag to not be picked up in algorithms
+//Implement label edge snap
+//Implement Merge
+//Implement Split
+//Implement Weight
+//Implement Tracker
+//Implement redo/undo
+//Implement zoom in/out
+//Implement all of the Transform tools
+
 namespace TikzGraphGen.Visualization
 {
-    //TODO: Implement zooming in/out
     //TODO: Add flag for _rsc that prevents changing tools while performing an action with the current tool
     //TODO: Add fill tool for drawing planar colorizations (and maybe vertex colorizations): Add planar colorizations to analysis
     public class TikzDrawingWindow : Form
@@ -27,8 +38,13 @@ namespace TikzGraphGen.Visualization
         public static readonly float DRAG_SENSITIVITY = 8.0f; //distance before dragging is recognized, in pixels
         public static readonly Color ACTION_HIGHLIGHT_COLOR = Color.FromArgb(155, 200, 200, 200);
         public static readonly Color SELECTED_HIGHLIGHT_COLOR = Color.FromArgb(155, 172, 206, 247);
+        public static readonly Color BORDER_GUIDE_COLOR = Color.FromArgb(255, 150, 150, 150);
+        public static readonly float BORDER_GUIDE_WIDTH = 2f;
+        public static readonly Color UNIT_GRID_GUIDE_COLOR = Color.FromArgb(255, 200, 200, 200);
+        public static readonly float UNIT_GRID_GUIDE_WIDTH = 1f;
         public static readonly float HIGHLIGHT_WIDTH = 3f;
         public static readonly float MAX_ANGLE_LINK = 4.0f;
+        public static readonly SizeF PAGE_SIZE = new(UnitConverter.InToPx(8.5f), UnitConverter.InToPx(11f));
 
         public static readonly ToolSettingDictionary DEFAULT_GRAPH_SETTINGS = new();
 
@@ -50,6 +66,7 @@ namespace TikzGraphGen.Visualization
         private bool _unitSnap;
         private bool _gridUnitSnap;
         private float _unitSize; //By default 1 unit = 1 mm
+        private bool _labelEdgeSnap;
         private bool _drawUnitGrid; 
 
         public TikzDrawingWindow(Form parent, RoutedShortcutCommand rsc) : base()
@@ -58,11 +75,12 @@ namespace TikzGraphGen.Visualization
             _rsc = rsc;
             _selectedSubgraph = null;
             _subgraphCopy = null;
-            _visibleCorner = new Coord(0, 0);
+            _visibleCorner = new Coord((Width - PAGE_SIZE.Width) / 2, 0);
 
-            _drawBorder = true;
+            _drawBorder = false;
+            _drawUnitGrid = false;
             _angleSnap = true;
-            _angleSnapAmt = ((float)Math.PI) / 12f;
+            _angleSnapAmt = MathF.PI / 12f;
             _unitSnap = false;
             _gridUnitSnap = false;
             _unitSize = UnitConverter.ST_MM * 10; //1 cm, a common Tikz unit
@@ -91,7 +109,7 @@ namespace TikzGraphGen.Visualization
             _rsc.CurrentToolChanged += (t) => Refresh();
             _rsc.Undo += () => _graph = Graph.Undo(_graph);
             _rsc.Redo += () => _graph = Graph.Redo(_graph);
-            _rsc.DeleteSelected += () => { _graph.DeleteSubgraph(_selectedSubgraph); _selectedSubgraph = null; };
+            _rsc.DeleteSelected += () => { if(_selectedSubgraph != null) _graph.DeleteSubgraph(_selectedSubgraph); _selectedSubgraph = null; Refresh(); };
             _rsc.Cut = () => { if (_selectedSubgraph != null) { _subgraphCopy = _selectedSubgraph; _graph.RemoveSubgraph(_subgraphCopy); _selectedSubgraph = null; } };
             _rsc.Copy = () => { if(_selectedSubgraph != null) _subgraphCopy = _selectedSubgraph; };
             _rsc.Paste = () => { if (_subgraphCopy != null) { _graph.AddSubgraph(_subgraphCopy, MouseToCoord(new Coord(MousePosition.X, MousePosition.Y))); } };
@@ -100,9 +118,10 @@ namespace TikzGraphGen.Visualization
             _rsc.ZoomFit = ZoomFit;
             _rsc.ToggleBorder = () => { _drawBorder = !_drawBorder; Refresh(); };
             _rsc.ToggleAngleSnap = () => { _angleSnap = !_angleSnap; Refresh(); };
-            _rsc.ToggleUnitSnap = () => { _unitSnap = !_unitSnap; if (_gridUnitSnap && _unitSnap) _rsc.ToggleGridUnitSnap(); else Refresh(); };
-            _rsc.ToggleGridUnitSnap = () => { _gridUnitSnap = !_gridUnitSnap; if (_gridUnitSnap && _unitSnap) _rsc.ToggleUnitSnap(); else Refresh(); };
+            _rsc.ToggleUnitSnap = () => { _unitSnap = !_unitSnap; Refresh(); };
+            _rsc.ToggleGridUnitSnap = () => { _gridUnitSnap = !_gridUnitSnap; Refresh(); };
             _rsc.ToggleUnitGrid = () => { _drawUnitGrid = !_drawUnitGrid; Refresh(); };
+            _rsc.ToggleLabelEdgeSnap = () => { _labelEdgeSnap = !_labelEdgeSnap; Refresh(); };
             _rsc.SelectAll = () => { _selectedSubgraph = _graph; Refresh(); };
         }
 
@@ -220,9 +239,17 @@ namespace TikzGraphGen.Visualization
 
             Graph sub = _graph.GetSubgraphWithin(_visibleCorner, (ClientRectangle.Width + _visibleCorner.X), (ClientRectangle.Height + _visibleCorner.Y));
 
-            //TODO: Draw border and/or unit grid here
+            if (_drawUnitGrid)
+            {
+                for (float x = _visibleCorner.X - _visibleCorner.X % _unitSize; x <= _visibleCorner.X + Width; x += _unitSize)
+                    e.Graphics.DrawLine(new Pen(new SolidBrush(UNIT_GRID_GUIDE_COLOR), UNIT_GRID_GUIDE_WIDTH), x - _visibleCorner.X, 0, x - _visibleCorner.X, Height);
+                for (float y = _visibleCorner.Y - _visibleCorner.Y % _unitSize; y <= _visibleCorner.Y + Height; y += _unitSize)
+                    e.Graphics.DrawLine(new Pen(new SolidBrush(UNIT_GRID_GUIDE_COLOR), UNIT_GRID_GUIDE_WIDTH), 0, y - _visibleCorner.Y, Width, y - _visibleCorner.Y);
+            }
+            if(_drawBorder) //I'm too lazy to just draw the line segments that are actually visible
+                e.Graphics.DrawRectangle(new Pen(new SolidBrush(BORDER_GUIDE_COLOR), BORDER_GUIDE_WIDTH), -_visibleCorner.X, -_visibleCorner.Y, PAGE_SIZE.Width, PAGE_SIZE.Height);
 
-            Graph selectedSub = _selectedSubgraph?.GetSubgraphWithin(_visibleCorner, (ClientRectangle.Width + _visibleCorner.X), (ClientRectangle.Height + _visibleCorner.Y));
+            Graph selectedSub = _selectedSubgraph?.GetSubgraphWithin(_visibleCorner, Width, Height);
             if (selectedSub != null && !selectedSub.IsEmpty())
             {
                 foreach (Edge eg in selectedSub.ViewEdges())
@@ -256,7 +283,7 @@ namespace TikzGraphGen.Visualization
                         EdgeCapToolInfo edgeCap = _rsc.ToolInfo.EdgeCapInfo;
                         edge.Color = ACTION_HIGHLIGHT_COLOR;
                         edgeCap.Style = EdgeLineStyle.EdgeCapShape.None;
-                        DrawEdge(e.Graphics, new Edge(edge, edgeCap, _firstVertex, new Vertex(_rsc.ToolInfo.VertexInfo, _mouseDragPos)));
+                        DrawEdge(e.Graphics, new Edge(edge, edgeCap, _firstVertex, new Vertex(new() { Style = VertexBorderStyle.BorderStyle.None, FillColor = Color.Transparent }, _mouseDragPos + _visibleCorner)));
                     }
                     break;
                 case SelectedTool.Select:
@@ -281,21 +308,24 @@ namespace TikzGraphGen.Visualization
                     Coord mouseGraphPos = _visibleCorner + _mouseDragPos;
                     if (_unitSnap || _angleSnap || _gridUnitSnap)
                     {
-                        Coord center = FindVertexRepositioning(new Coord(mouseGraphPos.X, mouseGraphPos.Y));
+                        Coord center = FindVertexRepositioning(mouseGraphPos);
 
-                        if (!center.Equals(mouseGraphPos) || _graph.GetPointClosestTo(mouseGraphPos) != null && Coord.DistanceFrom(mouseGraphPos, _graph.GetPointClosestTo(mouseGraphPos).Offset) <= MAX_ANGLE_LINK * _unitSize)
+                        if (!FindVertexRepositioning(mouseGraphPos).Equals(mouseGraphPos) || _graph.GetPointClosestTo(mouseGraphPos) != null && Coord.DistanceFrom(mouseGraphPos, _graph.GetPointClosestTo(mouseGraphPos).Offset) <= MAX_ANGLE_LINK * _unitSize)
                         {
-                            e.Graphics.FillEllipse(new SolidBrush(ACTION_HIGHLIGHT_COLOR), center.X - _rsc.ToolInfo.VertexInfo.Radius - _rsc.ToolInfo.VertexInfo.XRadius, center.Y - _rsc.ToolInfo.VertexInfo.Radius - _rsc.ToolInfo.VertexInfo.YRadius, 2 * _rsc.ToolInfo.VertexInfo.Radius + 2 * _rsc.ToolInfo.VertexInfo.XRadius, 2 * _rsc.ToolInfo.VertexInfo.Radius + 2 * _rsc.ToolInfo.VertexInfo.YRadius);
-                            Coord origin = _graph.GetPointClosestTo(mouseGraphPos)?.Offset;
+                            Coord adjustedMousePos = center - _visibleCorner;
+                            e.Graphics.FillEllipse(new SolidBrush(ACTION_HIGHLIGHT_COLOR), adjustedMousePos.X - _rsc.ToolInfo.VertexInfo.Radius - _rsc.ToolInfo.VertexInfo.XRadius, adjustedMousePos.Y - _rsc.ToolInfo.VertexInfo.Radius - _rsc.ToolInfo.VertexInfo.YRadius, 2 * _rsc.ToolInfo.VertexInfo.Radius + 2 * _rsc.ToolInfo.VertexInfo.XRadius, 2 * _rsc.ToolInfo.VertexInfo.Radius + 2 * _rsc.ToolInfo.VertexInfo.YRadius);
+                            Coord origin = _graph.GetSubgraphWithin(_visibleCorner, Width, Height).GetPointClosestTo(mouseGraphPos)?.Offset;
+                            if(origin != null)
+                                adjustedMousePos = origin - _visibleCorner;
                             if (!_gridUnitSnap && _unitSnap && origin != null) //Unit snap rendering
                             {
                                 for (float dist = 0; dist <= MAX_ANGLE_LINK * _unitSize; dist += _unitSize)
-                                    e.Graphics.DrawEllipse(new Pen(new SolidBrush(ACTION_HIGHLIGHT_COLOR)), origin.X - dist, origin.Y - dist, 2 * dist, 2 * dist);
+                                    e.Graphics.DrawEllipse(new Pen(new SolidBrush(ACTION_HIGHLIGHT_COLOR)), adjustedMousePos.X - dist, adjustedMousePos.Y - dist, 2 * dist, 2 * dist);
                             }
                             if (!_gridUnitSnap && _angleSnap && origin != null) //Angle snap rendering
                             {
                                 for (float sum = 0; sum <= 2 * MathF.PI; sum += _angleSnapAmt)
-                                    e.Graphics.DrawLine(new Pen(new SolidBrush(ACTION_HIGHLIGHT_COLOR)), origin, origin + (MAX_ANGLE_LINK * _unitSize) * new Coord(MathF.Cos(sum), MathF.Sin(sum)));
+                                    e.Graphics.DrawLine(new Pen(new SolidBrush(ACTION_HIGHLIGHT_COLOR)), adjustedMousePos, adjustedMousePos + (MAX_ANGLE_LINK * _unitSize) * new Coord(MathF.Cos(sum), MathF.Sin(sum)));
                             }
                         }
                     }
@@ -403,16 +433,16 @@ namespace TikzGraphGen.Visualization
 
         private void DrawEdgeCaps(Graphics g, Edge e)
         {
-           DrawSpecificEdgeCap(g, e.GetSourceOffset(), Coord.AngleBetween(e.ViewDestination().Offset, e.ViewSource().Offset), e.Style.SDirectionCap, e.Style.LineInfo.Color, e.Style.LineInfo.Thickness, false);
-           DrawSpecificEdgeCap(g, e.GetDestinationOffset(), Coord.AngleBetween(e.ViewSource().Offset, e.ViewDestination().Offset), e.Style.DDirectionCap, e.Style.LineInfo.Color, e.Style.LineInfo.Thickness, false);
+           DrawSpecificEdgeCap(g, e.GetSourceOffset() - _visibleCorner, Coord.AngleBetween(e.ViewDestination().Offset, e.ViewSource().Offset), e.Style.SDirectionCap, e.Style.LineInfo.Color, e.Style.LineInfo.Thickness, false);
+           DrawSpecificEdgeCap(g, e.GetDestinationOffset() - _visibleCorner, Coord.AngleBetween(e.ViewSource().Offset, e.ViewDestination().Offset), e.Style.DDirectionCap, e.Style.LineInfo.Color, e.Style.LineInfo.Thickness, false);
         }
         private void DrawHighlightedEdgeCaps(Graphics g, Edge e)
         {
-            DrawSpecificEdgeCap(g, e.GetSourceOffset(), Coord.AngleBetween(e.ViewDestination().Offset, e.ViewSource().Offset), e.Style.SDirectionCap, SELECTED_HIGHLIGHT_COLOR, e.Style.LineInfo.Thickness, true);
-            DrawSpecificEdgeCap(g, e.GetDestinationOffset(), Coord.AngleBetween(e.ViewSource().Offset, e.ViewDestination().Offset), e.Style.DDirectionCap, SELECTED_HIGHLIGHT_COLOR, e.Style.LineInfo.Thickness, true);
+            DrawSpecificEdgeCap(g, e.GetSourceOffset() - _visibleCorner, Coord.AngleBetween(e.ViewDestination().Offset, e.ViewSource().Offset), e.Style.SDirectionCap, SELECTED_HIGHLIGHT_COLOR, e.Style.LineInfo.Thickness, true);
+            DrawSpecificEdgeCap(g, e.GetDestinationOffset() - _visibleCorner, Coord.AngleBetween(e.ViewSource().Offset, e.ViewDestination().Offset), e.Style.DDirectionCap, SELECTED_HIGHLIGHT_COLOR, e.Style.LineInfo.Thickness, true);
         }
         //TODO: Modify drawing edge caps to properly follow dimensions of PGF arrow tips
-        private void DrawSpecificEdgeCap(Graphics g, Coord capEdge, float pointDirection, EdgeCapToolInfo style, Color color, float lineWidth, bool isHighlight)
+        private static void DrawSpecificEdgeCap(Graphics g, Coord capEdge, float pointDirection, EdgeCapToolInfo style, Color color, float lineWidth, bool isHighlight)
         {
             Coord unit = Coord.AngleUnit(pointDirection);
             Coord perpUnit = Coord.AngleUnit(pointDirection + MathF.PI / 2);
@@ -492,20 +522,20 @@ namespace TikzGraphGen.Visualization
                 }
             }
 
-            Coord mousePos = e.Location;
+            Coord mousePos = e.Location + _visibleCorner;
 
             switch (_rsc.CurrentTool)
             {
                 case SelectedTool.Vertex:
                     if (!_isDragging)
-                        _graph.CreateVertex(FindVertexRepositioning(_visibleCorner + mousePos), _rsc.ToolInfo.VertexInfo);
+                        _graph.CreateVertex(FindVertexRepositioning(mousePos), _rsc.ToolInfo.VertexInfo);
                     break;
                 case SelectedTool.Edge:
                     if (_firstVertex == null)
-                        _firstVertex = GetVerticesIn(_visibleCorner + mousePos).FirstOrDefault();
+                        _firstVertex = GetVerticesIn(mousePos).FirstOrDefault();
                     else
                     {
-                        Vertex _secondVertex = GetVerticesIn(_visibleCorner + mousePos).FirstOrDefault();
+                        Vertex _secondVertex = GetVerticesIn(mousePos).FirstOrDefault();
                         if (_firstVertex != null && _secondVertex != null && _firstVertex != _secondVertex && !_firstVertex.IsAdjacentTo(_secondVertex)) //TODO: Make support loops & multiedges later (give warning or automatically curve lines) (A -> A)
                             _graph.CreateEdge(_firstVertex, _secondVertex, _rsc.ToolInfo.EdgeInfo, _rsc.ToolInfo.EdgeCapInfo);
 
@@ -530,13 +560,13 @@ namespace TikzGraphGen.Visualization
                     }
                     break;
                 case SelectedTool.Eraser:
-                    Graph sub = _graph.GetSubgraphTouchingCircle(_visibleCorner + mousePos, 1); //Very small eraser to try and only erase what is directly clicked on
+                    Graph sub = _graph.GetSubgraphTouchingCircle(mousePos, 1); //Very small eraser to try and only erase what is directly clicked on
                     if(sub.ViewEdges().Count > 0 || sub.ViewVertices().Count > 0)
                         _graph.DeleteSubgraph(sub);
                     break;
                 case SelectedTool.Select:
                     if(!_isDragging)
-                        _selectedSubgraph = _graph.GetSubgraphTouchingCircle(_visibleCorner + mousePos, 1); //Very small selector to try and only select what is directly clicked on
+                        _selectedSubgraph = _graph.GetSubgraphTouchingCircle(mousePos, 1); //Very small selector to try and only select what is directly clicked on
                     break;
                 case SelectedTool.AreaSelect:
                     break;
@@ -573,8 +603,8 @@ namespace TikzGraphGen.Visualization
 
         private static float Round(float startVal, float range)
         {
-            if ((startVal % range) > (range / 2f))
-                startVal += range;
+            if (MathF.Abs(startVal % range) > (range / 2f))
+                startVal += MathF.Sign(startVal) * range;
             startVal -= startVal % range;
 
             return startVal;
@@ -599,7 +629,7 @@ namespace TikzGraphGen.Visualization
 
         private void DragEvent(object sender, MouseEventArgs e)
         {
-            Coord mousePos = e.Location;
+            Coord mousePos = e.Location + _visibleCorner;
 
             switch (_rsc.CurrentTool)
             {
@@ -607,10 +637,10 @@ namespace TikzGraphGen.Visualization
                     break;
                 case SelectedTool.Edge:
                     if (_mouseDownPos != null)
-                        _firstVertex = GetVerticesIn(_visibleCorner + _mouseDownPos).FirstOrDefault();
+                        _firstVertex = GetVerticesIn(_mouseDownPos + _visibleCorner).FirstOrDefault();
                     break;
                 case SelectedTool.Eraser:
-                    Graph sub = _graph.GetSubgraphTouchingCircle(_visibleCorner + mousePos, _rsc.ToolInfo.EraserInfo.Radius);
+                    Graph sub = _graph.GetSubgraphTouchingCircle(mousePos, _rsc.ToolInfo.EraserInfo.Radius);
                     if (sub.ViewEdges().Count > 0 || sub.ViewVertices().Count > 0)
                         _graph.DeleteSubgraph(sub);
                     break;
@@ -618,12 +648,12 @@ namespace TikzGraphGen.Visualization
                     if (!_isDragging)
                     {
                         //Only sets subgraph if the selected subgraph is not being clicked
-                        if (_selectedSubgraph == null || _selectedSubgraph.GetSubgraphTouchingCircle(_mouseDownPos, 1).IsEmpty())
-                            _selectedSubgraph = _graph.GetSubgraphTouchingCircle(_mouseDownPos, 1); //Very small selector to try and only click what is directly clicked on
+                        if (_selectedSubgraph == null || _selectedSubgraph.GetSubgraphTouchingCircle(_mouseDownPos + _visibleCorner, 1).IsEmpty())
+                            _selectedSubgraph = _graph.GetSubgraphTouchingCircle(_mouseDownPos + _visibleCorner, 1); //Very small selector to try and only click what is directly clicked on
                         
                         _graph.RemoveSubgraph(_selectedSubgraph, true);
                     }
-                    _selectedSubgraph.Translate(mousePos - _mouseDragPos);
+                    _selectedSubgraph.Translate(mousePos - (_mouseDragPos + _visibleCorner));
                     break;
                 case SelectedTool.EdgeCap:
                 case SelectedTool.AreaSelect:
@@ -654,8 +684,8 @@ namespace TikzGraphGen.Visualization
                     _graph.AddSubgraph(_selectedSubgraph, true);
                     break;
                 case SelectedTool.AreaSelect:
-                    Coord tlCorner = new(MathF.Min(((Point)_mouseDownPos).X, _mouseDragPos.X), MathF.Min(((Point)_mouseDownPos).Y, _mouseDragPos.Y));
-                    Coord brCorner = new(MathF.Max(((Point)_mouseDownPos).X, _mouseDragPos.X), MathF.Max(((Point)_mouseDownPos).Y, _mouseDragPos.Y));
+                    Coord tlCorner = new(MathF.Min((_mouseDownPos + _visibleCorner).X, (_mouseDragPos + _visibleCorner).X), MathF.Min((_mouseDownPos + _visibleCorner).Y, (_mouseDragPos + _visibleCorner).Y));
+                    Coord brCorner = new(MathF.Max((_mouseDownPos + _visibleCorner).X, (_mouseDragPos + _visibleCorner).X), MathF.Max((_mouseDownPos + _visibleCorner).Y, (_mouseDragPos + _visibleCorner).Y));
                     _selectedSubgraph = _graph.GetSubgraphWithin(tlCorner, brCorner.X - tlCorner.X, brCorner.Y - tlCorner.Y);
                     break;
                 default:
