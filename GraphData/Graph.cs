@@ -194,7 +194,7 @@ namespace TikzGraphGen
                    v.Offset.Y + v.Style.Radius + (v.Style.XRadius / 2) <= visibleCorner.Y + height)
                 {
                     output.AddVertex(v, true);
-                    v.ViewEdges().Distinct().ToList().ForEach(e => output.AddConnectedEdge(e, true));
+                    v.ViewEdges().Where(e => !output.ViewEdges().Contains(e)).ToList().ForEach(e => output.AddConnectedEdge(e, true));
                 }       
             }
 
@@ -262,6 +262,53 @@ namespace TikzGraphGen
             }
 
             return output;
+        }
+        /**
+         * Polygon should start and end with the same coordinates
+         **/
+        public Graph GetSubgraphTouchingPolygon(List<Coord> pts)
+        {
+            Graph output = new();
+            IEnumerable<Vertex> vts = _vertices.Where(v => IsInPolygon(pts, v.Offset));
+            foreach (Vertex v in vts)
+            {
+                output.AddVertex(v, true);
+                v.ViewEdges().Where(e => !output.ViewEdges().Contains(e)).ToList().ForEach(e => output.AddConnectedEdge(e, true));
+            }
+
+            return output;
+        }
+
+        private static bool IsInPolygon(List<Coord> pts, Coord c)
+        {
+            (float Min, float Max) xRange = (pts.First().X, pts.First().X);
+            (float Min, float Max) yRange = (pts.First().Y, pts.First().Y);
+            foreach(Coord pt in pts)
+            {
+                xRange = (MathF.Min(xRange.Min, pt.X), MathF.Max(xRange.Max, pt.X));
+                yRange = (MathF.Min(yRange.Min, pt.Y), MathF.Max(yRange.Max, pt.Y));
+            }
+
+            if (c.X < xRange.Min || c.X > xRange.Max || c.Y < yRange.Min || c.Y > yRange.Max)
+                return false;
+
+            int sum = 0;
+            System.Diagnostics.Debug.WriteLine($"Point {c}");
+            for (int i = 0; i < pts.Count - 1; i++) //pts ends with pts[0], so going to count - 2 will include every edge
+            {
+                if (Math.Max(pts[i].X, pts[i + 1].X) < c.X || Math.Min(pts[i].Y, pts[i + 1].Y) > c.Y || Math.Max(pts[i].Y, pts[i + 1].Y) < c.Y)
+                    continue;
+                if (pts[i + 1].X - pts[i].X == 0) //Vertical lines
+                {
+                    sum++;
+                    continue;
+                }
+
+                float slope = (pts[i + 1].Y - pts[i].Y) / (pts[i + 1].X - pts[i].X);
+                float xPt = (c.Y - pts[i].Y) / slope + pts[i].X;
+                sum += (Math.Min(pts[i].X, pts[i + 1].X) <= xPt && xPt <= Math.Max(pts[i].X, pts[i + 1].X)) ? 1 : 0;
+            }
+            return sum % 2 == 1;
         }
 
         private static bool HasRealRoots(float a, float b, float c, float d, float e)

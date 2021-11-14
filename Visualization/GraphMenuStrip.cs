@@ -43,6 +43,7 @@ namespace TikzGraphGen.Visualization
             ToolStripMenuItem init = new("New Project")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.N,
+                ShortcutKeyDisplayString = "Ctrl Shift N",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.NewProject();
@@ -51,6 +52,7 @@ namespace TikzGraphGen.Visualization
             init = new("Open")
             {
                 ShortcutKeys = Keys.Control | Keys.O,
+                ShortcutKeyDisplayString = "Ctrl O",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.Open();
@@ -62,6 +64,7 @@ namespace TikzGraphGen.Visualization
             init = new("Save")
             {
                 ShortcutKeys = Keys.Control | Keys.S,
+                ShortcutKeyDisplayString = "Ctrl S",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.Save();
@@ -70,6 +73,7 @@ namespace TikzGraphGen.Visualization
             init = new("Save As")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.S,
+                ShortcutKeyDisplayString = "Ctrl Shift S",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.SaveAs();
@@ -78,6 +82,7 @@ namespace TikzGraphGen.Visualization
             init = new("Export")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.E,
+                ShortcutKeyDisplayString = "Ctrl Shift E",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.Export();
@@ -88,6 +93,7 @@ namespace TikzGraphGen.Visualization
             init = new("Graph Info") //Get number of vertices, edges, directed edges, faces, etc.
             {
                 ShortcutKeys = Keys.Control | Keys.I,
+                ShortcutKeyDisplayString = "Ctrl I",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.DisplayInfo();
@@ -98,6 +104,7 @@ namespace TikzGraphGen.Visualization
             init = new("Quit")
             {
                 ShortcutKeys = Keys.Control | Keys.Alt | Keys.Q,
+                ShortcutKeyDisplayString = "Ctrl Alt Q",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.Quit();
@@ -113,6 +120,7 @@ namespace TikzGraphGen.Visualization
             ToolStripMenuItem init = new("Delete")
             {
                 ShortcutKeys = Keys.Delete,
+                ShortcutKeyDisplayString = "Delete",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.DeleteSelected();
@@ -121,6 +129,7 @@ namespace TikzGraphGen.Visualization
             init = new("Undo")
             {
                 ShortcutKeys = Keys.Control | Keys.Z,
+                ShortcutKeyDisplayString = "Ctrl Z",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.Undo();
@@ -131,6 +140,7 @@ namespace TikzGraphGen.Visualization
             init = new("Redo")
             {
                 ShortcutKeys = Keys.Control | Keys.Y,
+                ShortcutKeyDisplayString = "Ctrl Y",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.Redo();
@@ -147,6 +157,7 @@ namespace TikzGraphGen.Visualization
             init = new("Cut")
             {
                 ShortcutKeys = Keys.Control | Keys.X,
+                ShortcutKeyDisplayString = "Ctrl X",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.Cut();
@@ -155,6 +166,7 @@ namespace TikzGraphGen.Visualization
             init = new("Copy")
             {
                 ShortcutKeys = Keys.Control | Keys.C,
+                ShortcutKeyDisplayString = "Ctrl C",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.Copy();
@@ -163,6 +175,7 @@ namespace TikzGraphGen.Visualization
             init = new("Paste")
             {
                 ShortcutKeys = Keys.Control | Keys.V,
+                ShortcutKeyDisplayString = "Ctrl V",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.Paste();
@@ -177,6 +190,7 @@ namespace TikzGraphGen.Visualization
             init = new("Set Units")
             {
                 ShortcutKeys = Keys.Control | Keys.Alt | Keys.U,
+                ShortcutKeyDisplayString = "Ctrl Alt U",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.SetUnits();
@@ -185,6 +199,7 @@ namespace TikzGraphGen.Visualization
             init = new("Font Options") //(include apply to all option)
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.F,
+                ShortcutKeyDisplayString = "Ctrl Shift F",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.FontOptions();
@@ -193,6 +208,7 @@ namespace TikzGraphGen.Visualization
             init = new("Preferences")
             {
                 ShortcutKeys = Keys.Control | Keys.Alt | Keys.P,
+                ShortcutKeyDisplayString = "Ctrl Alt P",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.Preferences();
@@ -205,11 +221,21 @@ namespace TikzGraphGen.Visualization
         {
             ToolStripMenuItem view = new("&View");
 
-            ToolStripMenuItem init = new("Zoom In");
+            ToolStripMenuItem init = new("Zoom In")
+            {
+                ShortcutKeys = Keys.Control | Keys.Oemplus,
+                ShortcutKeyDisplayString = "Ctrl +",
+                ShowShortcutKeys = true
+            };
             init.Click += (o, e) => _rsc.ZoomInc();
             view.DropDownItems.Add(init);
 
-            init = new("Zoom Out");
+            init = new("Zoom Out")
+            {
+                ShortcutKeys = Keys.Control | Keys.OemMinus,
+                ShortcutKeyDisplayString = "Ctrl -",
+                ShowShortcutKeys = true
+            };
             init.Click += (o, e) => _rsc.ZoomDec();
             view.DropDownItems.Add(init);
 
@@ -230,6 +256,7 @@ namespace TikzGraphGen.Visualization
             init = new("Zoom To Fit") //Make entire graph fit on screen (if possible)
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.O,
+                ShortcutKeyDisplayString = "Ctrl Shift O",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.ZoomFit();
@@ -248,6 +275,7 @@ namespace TikzGraphGen.Visualization
             init = new("Angle Snap") //(snap to every 15%, toggle)
             {
                 ShortcutKeys = Keys.Control | Keys.Alt | Keys.A,
+                ShortcutKeyDisplayString = "Ctrl Alt A",
                 ShowShortcutKeys = true,
                 Checked = true,
                 CheckOnClick = true
@@ -258,6 +286,7 @@ namespace TikzGraphGen.Visualization
             init = new("Snap To Unit") //(on by default, attempts to make new lines/vertices along increments (i.e. every new vertex is 10mm apart))
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.I,
+                ShortcutKeyDisplayString = "Ctrl Shift I",
                 ShowShortcutKeys = true,
                 Checked = false,
                 CheckOnClick = true
@@ -268,6 +297,7 @@ namespace TikzGraphGen.Visualization
             init = new("Snap To Unit Grid")
             {
                 ShortcutKeys = Keys.Control | Keys.U,
+                ShortcutKeyDisplayString = "Ctrl U",
                 ShowShortcutKeys = true,
                 Checked = false,
                 CheckOnClick = true
@@ -280,6 +310,7 @@ namespace TikzGraphGen.Visualization
             init = new("Show Page Border") //(create line showing page border + margin dimensions for PDF page)
             {
                 ShortcutKeys = Keys.Control | Keys.Alt | Keys.B,
+                ShortcutKeyDisplayString = "Ctrl Alt B",
                 ShowShortcutKeys = true,
                 Checked = false,
                 CheckOnClick = true
@@ -290,6 +321,7 @@ namespace TikzGraphGen.Visualization
             init = new("Show Unit Grid")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.U,
+                ShortcutKeyDisplayString = "Ctrl Shift U",
                 ShowShortcutKeys = true,
                 Checked = false,
                 CheckOnClick = true
@@ -300,6 +332,7 @@ namespace TikzGraphGen.Visualization
             init = new("Show Menubar")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.M,
+                ShortcutKeyDisplayString = "Ctrl Shift M",
                 ShowShortcutKeys = true,
                 Checked = true,
                 CheckOnClick = true
@@ -310,6 +343,7 @@ namespace TikzGraphGen.Visualization
             init = new("Show Toolbar")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.T,
+                ShortcutKeyDisplayString = "Ctrl Shift T",
                 ShowShortcutKeys = true,
                 Checked = true,
                 CheckOnClick = true
@@ -325,103 +359,77 @@ namespace TikzGraphGen.Visualization
             ToolStripMenuItem tool = new("&Tools");
             ToolStripMenuItem init = new("Vertex")
             {
-                ShortcutKeys = Keys.Control | Keys.K,
+                ShortcutKeys = Keys.Control | Keys.J,
+                ShortcutKeyDisplayString = "Ctrl J",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Vertex;
-            init.DropDownItems.AddRange(new ToolStripItem[] {
-                new ToolStripMenuItem("Circle"),
-                new ToolStripMenuItem("Square"),
-                new ToolStripMenuItem("Diamond"),
-                new ToolStripMenuItem("Rectangle"),
-                new ToolStripMenuItem("Ellipse"),
-                new ToolStripMenuItem("No Outline"),
-                new ToolStripSeparator(),
-                new ToolStripButton("Vertex Options") //Fit vertex to text option
-            });
-            ((ToolStripMenuItem)init.DropDownItems[0]).Checked = true;
             tool.DropDownItems.Add(init);
 
             init = new("Edge")
             {
                 ShortcutKeys = Keys.Control | Keys.G,
+                ShortcutKeyDisplayString = "Ctrl G",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Edge;
-            init.DropDownItems.AddRange(new ToolStripItem[] {
-                new ToolStripMenuItem("Regular"),
-                new ToolStripMenuItem("Bent"),
-                new ToolStripMenuItem("Curved"),
-                new ToolStripMenuItem("Beizer"),
-                new ToolStripMenuItem("No Line"),
-                new ToolStripSeparator(),
-                new ToolStripButton("Edge Options")
-            });
-            ((ToolStripMenuItem)init.DropDownItems[0]).Checked = true;
             tool.DropDownItems.Add(init);
 
             init = new("Edge Cap")
             {
                 ShortcutKeys = Keys.Control | Keys.H,
+                ShortcutKeyDisplayString = "Ctrl H",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.EdgeCap;
-            init.DropDownItems.AddRange(new ToolStripItem[]
-            {
-                new ToolStripMenuItem("Arrow"),
-                new ToolStripMenuItem("Square"),
-                new ToolStripMenuItem("Round"),
-                new ToolStripSeparator(),
-                new ToolStripButton("Edge Cap Options")
-            });
-            ((ToolStripMenuItem)init.DropDownItems[2]).Checked = true;
             tool.DropDownItems.Add(init);
+
+            tool.DropDownItems.Add(new ToolStripSeparator());
 
             init = new("Label")
             {
                 ShortcutKeys = Keys.Control | Keys.L,
+                ShortcutKeyDisplayString = "Ctrl L",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Label;
-            init.DropDownItems.AddRange(new ToolStripItem[] {
-                new ToolStripMenuItem("Label Snap"),
-                new ToolStripSeparator(),
-                new ToolStripButton("Font Options"),
-                new ToolStripButton("Label Options")
-            });
             tool.DropDownItems.Add(init);
-            init = (ToolStripMenuItem)init.DropDownItems[0];
-            init.Checked = true;
-            init.CheckOnClick = true;
-            init.ShortcutKeys = Keys.Control | Keys.Shift | Keys.L;
-            init.ShowShortcutKeys = true;
+
+            init = new("Label Snap")
+            {
+                Checked = true,
+                CheckOnClick = true,
+                ShortcutKeys = Keys.Control | Keys.Shift | Keys.L,
+                ShortcutKeyDisplayString = "Ctrl Shift L",
+                ShowShortcutKeys = true
+            };
             init.Click += (o, e) => _rsc.ToggleLabelEdgeSnap();
+            tool.DropDownItems.Add(init);
+
+            tool.DropDownItems.Add(new ToolStripSeparator());
 
             init = new("Eraser")
             {
                 ShortcutKeys = Keys.Control | Keys.B,
+                ShortcutKeyDisplayString = "Ctrl B",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Eraser;
             tool.DropDownItems.Add(init);
 
-            init = new("Transform") //TODO: Add shortcuts for transform subtools
+            init = new("Transform") //TODO: Expand to be several menuitems with each transform subtool (each with a shortcut too)
             {
                 ShortcutKeys = Keys.Control | Keys.N,
+                ShortcutKeyDisplayString = "Ctrl N",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Transform;
-            init.DropDownItems.AddRange(new ToolStripItem[] {
-                new ToolStripMenuItem("Rotate"),
-                new ToolStripMenuItem("Move"),
-                new ToolStripMenuItem("Resize")
-            });
-            ((ToolStripMenuItem)init.DropDownItems[1]).Checked = true;
             tool.DropDownItems.Add(init);
 
             init = new("Select")
             {
                 ShortcutKeys = Keys.Control | Keys.E,
+                ShortcutKeyDisplayString = "Ctrl E",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Select;
@@ -430,6 +438,7 @@ namespace TikzGraphGen.Visualization
             init = new("Area Select")
             {
                 ShortcutKeys = Keys.Control | Keys.A,
+                ShortcutKeyDisplayString = "Ctrl A",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.AreaSelect;
@@ -438,6 +447,7 @@ namespace TikzGraphGen.Visualization
             init = new("Select All")
             {
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.A,
+                ShortcutKeyDisplayString = "Ctrl Shift A",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.SelectAll();
@@ -446,52 +456,60 @@ namespace TikzGraphGen.Visualization
             init = new("Lasso")
             {
                 ShortcutKeys = Keys.Control | Keys.Q,
+                ShortcutKeyDisplayString = "Ctrl Q",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Lasso;
             tool.DropDownItems.Add(init);
 
+            tool.DropDownItems.Add(new ToolStripSeparator());
+
             init = new("Weight")
             {
                 ShortcutKeys = Keys.Control | Keys.W,
+                ShortcutKeyDisplayString = "Ctrl W",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Weight;
-            init.DropDownItems.AddRange(new ToolStripItem[] { //TODO: Add shortcuts for weight subtools
-                new ToolStripMenuItem("Increment"),
-                new ToolStripMenuItem("Decrement"),
-                new ToolStripMenuItem("Clear"),
-                new ToolStripSeparator(),
-                new ToolStripMenuItem("Clear All")
-            });
-            ((ToolStripMenuItem)init.DropDownItems[0]).Checked = true;
             tool.DropDownItems.Add(init);
+
+            tool.DropDownItems.Add(init); init = new("Clear All Weights");
+            tool.DropDownItems.Add(init);
+
+            tool.DropDownItems.Add(new ToolStripSeparator());
 
             init = new("Tracker")
             {
                 ShortcutKeys = Keys.Control | Keys.T,
+                ShortcutKeyDisplayString = "Ctrl T",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Tracker;
+            tool.DropDownItems.Add(init);
+
+            init = new("Tracking Categories");
             init.DropDownItems.AddRange(new ToolStripItem[] { //TODO: Add shortcuts for tracker subtools
-                new ToolStripMenuItem("Disable"),
-                new ToolStripMenuItem("Enable"),
-                new ToolStripSeparator(),
-                new ToolStripMenuItem("Filter"), //Only apply to items selected below
                 new ToolStripMenuItem("Vertex"),
                 new ToolStripMenuItem("Edge"),
-                new ToolStripMenuItem("Arc"),
-                new ToolStripMenuItem("Arrow Head"),
-                new ToolStripMenuItem("Label"),
-                new ToolStripMenuItem("Weight"),
-                new ToolStripButton("Apply to All")
+                new ToolStripMenuItem("Arc Direction")
             });
-            ((ToolStripMenuItem)init.DropDownItems[0]).Checked = true;
+            for(int i = 0; i < init.DropDownItems.Count; i++)
+            {
+                ((ToolStripMenuItem)init.DropDownItems[i]).Checked = true;
+                ((ToolStripMenuItem)init.DropDownItems[i]).CheckOnClick = true;
+            }
+            init.DropDownItems.Insert(0, new ToolStripMenuItem("Filter by Categories"));
+            init.DropDownItems.Insert(1, new ToolStripMenuItem("Enable All in Category"));
+            init.DropDownItems.Insert(2, new ToolStripMenuItem("Disable All in Category"));
+            init.DropDownItems.Insert(3, new ToolStripSeparator());
             tool.DropDownItems.Add(init);
+
+            tool.DropDownItems.Add(new ToolStripSeparator());
 
             init = new("Merge") //(G \ e)
             {
                 ShortcutKeys = Keys.Control | Keys.M,
+                ShortcutKeyDisplayString = "Ctrl M",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Merge;
@@ -499,7 +517,8 @@ namespace TikzGraphGen.Visualization
 
             init = new("Split")
             {
-                ShortcutKeys = Keys.Control | Keys.J,
+                ShortcutKeys = Keys.Control | Keys.K,
+                ShortcutKeyDisplayString = "Ctrl K",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Split;
@@ -510,9 +529,7 @@ namespace TikzGraphGen.Visualization
                 foreach (ToolStripItem i in tool.DropDownItems)
                 {
                     if(i is ToolStripMenuItem item)
-                    {
                         item.Checked = false;
-                    }
                 }
 
                 switch (cur)
@@ -527,34 +544,34 @@ namespace TikzGraphGen.Visualization
                         ((ToolStripMenuItem)tool.DropDownItems[2]).Checked = true;
                         break;
                     case SelectedTool.Label:
-                        ((ToolStripMenuItem)tool.DropDownItems[3]).Checked = true;
-                        break;
-                    case SelectedTool.Eraser:
                         ((ToolStripMenuItem)tool.DropDownItems[4]).Checked = true;
                         break;
-                    case SelectedTool.Transform:
-                        ((ToolStripMenuItem)tool.DropDownItems[5]).Checked = true;
-                        break;
-                    case SelectedTool.Select:
-                        ((ToolStripMenuItem)tool.DropDownItems[6]).Checked = true;
-                        break;
-                    case SelectedTool.AreaSelect:
+                    case SelectedTool.Eraser:
                         ((ToolStripMenuItem)tool.DropDownItems[7]).Checked = true;
                         break;
-                    case SelectedTool.Lasso:
+                    case SelectedTool.Transform:
+                        ((ToolStripMenuItem)tool.DropDownItems[8]).Checked = true;
+                        break;
+                    case SelectedTool.Select:
                         ((ToolStripMenuItem)tool.DropDownItems[9]).Checked = true;
                         break;
-                    case SelectedTool.Weight:
+                    case SelectedTool.AreaSelect:
                         ((ToolStripMenuItem)tool.DropDownItems[10]).Checked = true;
                         break;
-                    case SelectedTool.Tracker:
-                        ((ToolStripMenuItem)tool.DropDownItems[11]).Checked = true;
-                        break;
-                    case SelectedTool.Merge:
+                    case SelectedTool.Lasso:
                         ((ToolStripMenuItem)tool.DropDownItems[12]).Checked = true;
                         break;
+                    case SelectedTool.Weight:
+                        ((ToolStripMenuItem)tool.DropDownItems[14]).Checked = true;
+                        break;
+                    case SelectedTool.Tracker:
+                        ((ToolStripMenuItem)tool.DropDownItems[17]).Checked = true;
+                        break;
+                    case SelectedTool.Merge:
+                        ((ToolStripMenuItem)tool.DropDownItems[18]).Checked = true;
+                        break;
                     case SelectedTool.Split:
-                        ((ToolStripMenuItem)tool.DropDownItems[13]).Checked = true;
+                        ((ToolStripMenuItem)tool.DropDownItems[21]).Checked = true;
                         break;
                     default:
                         throw new NotImplementedException();
@@ -564,9 +581,7 @@ namespace TikzGraphGen.Visualization
             return tool;
         }
 
-#pragma warning disable CA1822 // Mark members as static
         private ToolStripMenuItem InitializeAnalyzeOptions()
-#pragma warning restore CA1822 // Mark members as static
         {
             ToolStripMenuItem analysis = new("&Analysis");
 
@@ -637,6 +652,7 @@ namespace TikzGraphGen.Visualization
             ToolStripMenuItem init = new("Guide")
             {
                 ShortcutKeys = Keys.F1,
+                ShortcutKeyDisplayString = "F1",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.Guide();
@@ -644,6 +660,7 @@ namespace TikzGraphGen.Visualization
             init = new("Context Help")
             {
                 ShortcutKeys = Keys.Shift | Keys.F1,
+                ShortcutKeyDisplayString = "Shift F1",
                 ShowShortcutKeys = true
             };
             init.Click += (o, e) => _rsc.ContextHelp();
@@ -662,9 +679,7 @@ namespace TikzGraphGen.Visualization
             if((submenu is ToolStripMenuItem m) && m.DropDownItems.Count != 0)
             {
                 foreach(ToolStripItem i in m.DropDownItems)
-                {
                     SetSubmenuWidth(i, width);
-                }
             }
         }
     }

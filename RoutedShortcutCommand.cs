@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Windows.Forms;
 using TikzGraphGen.Visualization;
 using static TikzGraphGen.EdgeLineStyle;
@@ -13,27 +12,10 @@ namespace TikzGraphGen
         public static readonly string CONFIRMATION = "Close without saving?";
 
         private SelectedTool _currentTool;
+        private bool _canChangeTool;
         public SelectedTool CurrentTool {
             get { return _currentTool; }
-            set { _currentTool = value; CurrentToolChanged(_currentTool); }
-        }
-        private Concentration _lineConcentration;
-        public Concentration LineConcentration
-        {
-            get { return _lineConcentration; }
-            set { _lineConcentration = value; LineConcentrationChanged(_lineConcentration); }
-        }
-        private LineStyle _lineStyle;
-        public LineStyle LineStyle
-        {
-            get { return _lineStyle; }
-            set { _lineStyle = value; LineStyleChanged(_lineStyle); }
-        }
-        private VertexBorderStyle.BorderStyle _borderStyle;
-        public VertexBorderStyle.BorderStyle BorderStyle
-        {
-            get { return _borderStyle; }
-            set { _borderStyle = value; BorderStyleChanged(_borderStyle); }
+            set { if (_canChangeTool) { _currentTool = value; CurrentToolChanged(_currentTool); } }
         }
 
         private readonly ToolSettingDictionary _toolInfo;
@@ -56,9 +38,6 @@ namespace TikzGraphGen
         }
 
         public event CurrentTool_Change CurrentToolChanged;
-        public event Concentration_Change LineConcentrationChanged;
-        public event LineStyle_Change LineStyleChanged;
-        public event BorderStyle_Change BorderStyleChanged;
         public event ToolInfo_Change ToolInfoChanged;
         public event CanUndo_Change CanUndoStatusChanged;
         public event CanRedo_Change CanRedoStatusChanged;
@@ -66,9 +45,7 @@ namespace TikzGraphGen
         public RoutedShortcutCommand()
         {
             _currentTool = SelectedTool.Vertex;
-            _lineConcentration = Concentration.Regular;
-            _lineStyle = LineStyle.Solid;
-            _borderStyle = VertexBorderStyle.BorderStyle.Circle;
+            _canChangeTool = true;
 
             _toolInfo = new();
         }
@@ -103,11 +80,11 @@ namespace TikzGraphGen
         public GeneralCommand ToggleLabelEdgeSnap; //
         public GeneralCommand ToggleMenu; //
         public GeneralCommand ToggleTools; //
+        public GeneralCommand SelectAll; //
         public GeneralCommand Guide; //
         public GeneralCommand ContextHelp; // <- Have TikzWindow overlay a large transparent window,
         //which gets the position of the mouse when clicking and opens the guide to the relevent information of the object at those coordinates in the rest of TikzWindow
         public GeneralCommand About; //
-        public GeneralCommand SelectAll; //
 
         public static string SavePrompt() //Retry = save, Abort = continue, Ignore = cancel
         {
@@ -173,10 +150,12 @@ namespace TikzGraphGen
             ToolInfoChanged(_toolInfo);
         }
 
+        /**
+         * Screwing with this will mess up TikzDrawingWindow. Should not be called unless implementing new features for said class.
+         **/
+        public void ModifyToolPermission(bool canChange) => _canChangeTool = canChange;
+
         public delegate void CurrentTool_Change(SelectedTool tool);
-        public delegate void Concentration_Change(Concentration conc);
-        public delegate void LineStyle_Change(LineStyle style);
-        public delegate void BorderStyle_Change(VertexBorderStyle.BorderStyle style);
         public delegate void ToolInfo_Change(ToolSettingDictionary toolInfo);
         public delegate void CanUndo_Change(bool canUndo);
         public delegate void CanRedo_Change(bool canRedo);

@@ -8,20 +8,22 @@ using TikzGraphGen.GraphData;
 using static TikzGraphGen.ToolSettingDictionary;
 
 //Next goals:
-//Implement Lasso
 //Implement labels for editing vertices or creating labels in space (specially modified vertices with tag to not be picked up in algorithms
-//Implement label edge snap
+//Implement label edge snap (find mid point of edge (create function that is overriden in bent/curved edge) and find instantaneous angle at that point (also implement a function)
+//                                then, check if mouse is above or below the point. Add text at point above or below correspondingly, spaced away along perpendicular line by pixel amount determined by LabelToolInfo's edgeSpacing property
+//                                finally, add text rotation style property to LabelToolInfo and text rotation angle property (styles: angle, vertical, horizontal, parallel, perpendicular), which determine angle to write text at
+//                                also add CenterType property (Start of text, end of text, midpoint, auto) - Auto will choose whichever centering will make the text avoid crossing over the text
 //Implement Merge
 //Implement Split
 //Implement Weight
 //Implement Tracker
 //Implement redo/undo
-//Implement zoom in/out
 //Implement all of the Transform tools
+//Create Hide Tool (hides vertex to allow editing vertices behind it; also include command/button to show all vertices)
+//Make zooming in/out with shortcuts keep position under cursor at same coordinate
 
 namespace TikzGraphGen.Visualization
 {
-    //TODO: Add flag for _rsc that prevents changing tools while performing an action with the current tool
     //TODO: Add fill tool for drawing planar colorizations (and maybe vertex colorizations): Add planar colorizations to analysis
     public class TikzDrawingWindow : Form
     {
@@ -29,9 +31,11 @@ namespace TikzGraphGen.Visualization
         {
             Vertex, Edge, EdgeCap, Label, Eraser, Transform, Select, AreaSelect, Lasso, Weight, Tracker, Merge, Split
         }
-        public static readonly float[] FIXED_ZOOM_LEVEL_PERCENT = new float[] { 1/16, 1/8, 1/4, 1/3, 1/2, 1, 2, 3, 4, 8, 16 };
+        public static readonly float[] FIXED_ZOOM_LEVEL_PERCENT = new float[] { 16f, 8f, 4f, 3f, 2f, 1f, 1/2f, 1/3f, 1/4f, 1/8f, 1/16f };
         public static readonly float ZOOM_OOB_MULTIPLIER = 0.8f;
         public static readonly int UNIQUE_ZOOM_LEVEL = -1;
+        public static readonly float MAX_ZOOM = 100000f;
+        public static readonly float MIN_ZOOM = 0.000001f;
 
         public static readonly Color DRAWING_BACKGROUND_COLOR = Color.White;
 
@@ -59,6 +63,7 @@ namespace TikzGraphGen.Visualization
         private bool _isDragging;
 
         private Vertex _firstVertex;
+        private readonly List<PointF> _lassoPts;
 
         private bool _drawBorder;
         private bool _angleSnap;
@@ -67,7 +72,10 @@ namespace TikzGraphGen.Visualization
         private bool _gridUnitSnap;
         private float _unitSize; //By default 1 unit = 1 mm
         private bool _labelEdgeSnap;
-        private bool _drawUnitGrid; 
+        private bool _drawUnitGrid;
+
+        private int _fixedZoomLevel;
+        private float _variableZoom;
 
         public TikzDrawingWindow(Form parent, RoutedShortcutCommand rsc) : base()
         {
@@ -89,6 +97,10 @@ namespace TikzGraphGen.Visualization
             _isDragging = false;
 
             _firstVertex = null;
+            _lassoPts = new List<PointF>();
+
+            _fixedZoomLevel = 5; //5 = 1.0 scale (default)
+            _variableZoom = FIXED_ZOOM_LEVEL_PERCENT[_fixedZoomLevel];
 
             Owner = parent;
             TopLevel = false;
@@ -106,7 +118,14 @@ namespace TikzGraphGen.Visualization
             MouseMove += TikzDrawingWindow_MouseMove;
             MouseUp += TikzDrawingWindow_MouseUp;
 
-            _rsc.CurrentToolChanged += (t) => Refresh();
+            _rsc.CurrentToolChanged += (t) =>
+            {
+                _firstVertex = null;
+                _isDragging = false;
+                _mouseDownPos = null;
+                _lassoPts.Clear();
+                Refresh();
+            };
             _rsc.Undo += () => _graph = Graph.Undo(_graph);
             _rsc.Redo += () => _graph = Graph.Redo(_graph);
             _rsc.DeleteSelected += () => { if(_selectedSubgraph != null) _graph.DeleteSubgraph(_selectedSubgraph); _selectedSubgraph = null; Refresh(); };
@@ -157,26 +176,25 @@ namespace TikzGraphGen.Visualization
 
         public void ZoomIn()
         {
-            /*
             if (_fixedZoomLevel > 0)
             {
                 _fixedZoomLevel--;
                 _variableZoom = FIXED_ZOOM_LEVEL_PERCENT[_fixedZoomLevel];
             }
-            else if(_variableZoom <= FIXED_ZOOM_LEVEL_PERCENT[0])
+            else if(_fixedZoomLevel == 0 || _variableZoom >= FIXED_ZOOM_LEVEL_PERCENT[0])
             {
                 _fixedZoomLevel = UNIQUE_ZOOM_LEVEL;
-                _variableZoom *= ZOOM_OOB_MULTIPLIER;
+                _variableZoom = MathF.Min(MAX_ZOOM, _variableZoom / ZOOM_OOB_MULTIPLIER);
             }
-            else if(_variableZoom >= FIXED_ZOOM_LEVEL_PERCENT[^1] / ZOOM_OOB_MULTIPLIER) //Zoom is significantly higher than largest fixed level
+            else if(_variableZoom / ZOOM_OOB_MULTIPLIER < FIXED_ZOOM_LEVEL_PERCENT[^1]) //Zoom is significantly higher than largest fixed level
             {
                 _fixedZoomLevel = UNIQUE_ZOOM_LEVEL;
-                _variableZoom *= ZOOM_OOB_MULTIPLIER;
+                _variableZoom = MathF.Min(MAX_ZOOM, _variableZoom / ZOOM_OOB_MULTIPLIER);
             }
             else
             {
                 int pos;
-                for(pos = FIXED_ZOOM_LEVEL_PERCENT.Length - 1; pos >= 0; pos--)
+                for(pos = 0; pos < FIXED_ZOOM_LEVEL_PERCENT.Length - 1; pos++)
                 {
                     if(FIXED_ZOOM_LEVEL_PERCENT[pos] < _variableZoom)
                         break;
@@ -184,59 +202,61 @@ namespace TikzGraphGen.Visualization
                 _fixedZoomLevel = pos;
                 _variableZoom = FIXED_ZOOM_LEVEL_PERCENT[pos];
             }
-            */
+            Refresh();
         }
         public void ZoomOut()
         {
-            /*
-            if (_fixedZoomLevel > 0 && _fixedZoomLevel < FIXED_ZOOM_LEVEL_PERCENT.Length - 1)
+            if (_fixedZoomLevel != -1 && _fixedZoomLevel < FIXED_ZOOM_LEVEL_PERCENT.Length - 1)
             {
                 _fixedZoomLevel++;
                 _variableZoom = FIXED_ZOOM_LEVEL_PERCENT[_fixedZoomLevel];
             }
-            else if (_variableZoom >= FIXED_ZOOM_LEVEL_PERCENT[^1])
+            else if (_fixedZoomLevel == FIXED_ZOOM_LEVEL_PERCENT.Length - 1 || _variableZoom <= FIXED_ZOOM_LEVEL_PERCENT[^1])
             {
                 _fixedZoomLevel = UNIQUE_ZOOM_LEVEL;
-                _variableZoom *= 1 + ZOOM_OOB_MULTIPLIER;
+                _variableZoom = MathF.Max(MIN_ZOOM, _variableZoom * ZOOM_OOB_MULTIPLIER);
             }
-            else if (_variableZoom <= FIXED_ZOOM_LEVEL_PERCENT[0] / (1 + ZOOM_OOB_MULTIPLIER)) //Zoom is significantly smaller than smallest fixed level
+            else if (_variableZoom * ZOOM_OOB_MULTIPLIER > FIXED_ZOOM_LEVEL_PERCENT[0]) //Zoom is significantly smaller than smallest fixed level
             {
                 _fixedZoomLevel = UNIQUE_ZOOM_LEVEL;
-                _variableZoom *= 1 + ZOOM_OOB_MULTIPLIER;
+                _variableZoom = MathF.Max(MIN_ZOOM, _variableZoom * ZOOM_OOB_MULTIPLIER);
             }
             else
             {
                 int pos;
-                for (pos = 0; pos < FIXED_ZOOM_LEVEL_PERCENT.Length; pos++)
+                for (pos = FIXED_ZOOM_LEVEL_PERCENT.Length - 1; pos > 0; pos--)
                 {
                     if (FIXED_ZOOM_LEVEL_PERCENT[pos] > _variableZoom)
                         break;
                 }
                 _fixedZoomLevel = pos;
                 _variableZoom = FIXED_ZOOM_LEVEL_PERCENT[pos];
-            }*/
+            }
+            Refresh();
         }
 
         public void ZoomFit()
         {
-            /*
             Coord bounds = _graph.GetBounds();
             float xRatio = Width / bounds.X;
             float yRatio = Height / bounds.Y;
             _variableZoom = Math.Min(xRatio, yRatio);
-            _fixedZoomLevel = UNIQUE_ZOOM_LEVEL;]
-            */
+            _fixedZoomLevel = UNIQUE_ZOOM_LEVEL;
+            Refresh();
         }
 
         public void ScrollVisibleArea(float dx, float dy)
         {
             _visibleCorner += (dx, dy);
+            Refresh();
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
+            e.Graphics.ResetTransform();
             base.OnPaint(e);
 
+            e.Graphics.ScaleTransform(_variableZoom, _variableZoom);
             Graph sub = _graph.GetSubgraphWithin(_visibleCorner, (ClientRectangle.Width + _visibleCorner.X), (ClientRectangle.Height + _visibleCorner.Y));
 
             if (_drawUnitGrid)
@@ -270,6 +290,8 @@ namespace TikzGraphGen.Visualization
                     DrawVertex(e.Graphics, v, v.Offset - _visibleCorner);
 
             PostVertexPaint(e);
+            e.Graphics.ResetTransform();
+            e.Graphics.DrawString($"{_variableZoom}", new Font(FontFamily.GenericMonospace, 20), new SolidBrush(Color.Black), new PointF());
         }
 
         private void PreVertexPaint(PaintEventArgs e)
@@ -283,7 +305,7 @@ namespace TikzGraphGen.Visualization
                         EdgeCapToolInfo edgeCap = _rsc.ToolInfo.EdgeCapInfo;
                         edge.Color = ACTION_HIGHLIGHT_COLOR;
                         edgeCap.Style = EdgeLineStyle.EdgeCapShape.None;
-                        DrawEdge(e.Graphics, new Edge(edge, edgeCap, _firstVertex, new Vertex(new() { Style = VertexBorderStyle.BorderStyle.None, FillColor = Color.Transparent }, _mouseDragPos + _visibleCorner)));
+                        DrawEdge(e.Graphics, new Edge(edge, edgeCap, _firstVertex, new Vertex(new() { Style = VertexBorderStyle.BorderStyle.None, FillColor = Color.Transparent }, _visibleCorner + (Coord)_mouseDragPos / _variableZoom)));
                     }
                     break;
                 case SelectedTool.Select:
@@ -295,6 +317,7 @@ namespace TikzGraphGen.Visualization
                 case SelectedTool.EdgeCap:
                 case SelectedTool.Eraser:
                 case SelectedTool.AreaSelect:
+                case SelectedTool.Lasso:
                     break;
                 default:
                     throw new NotImplementedException();
@@ -305,7 +328,7 @@ namespace TikzGraphGen.Visualization
             switch (_rsc.CurrentTool)
             {
                 case SelectedTool.Vertex:
-                    Coord mouseGraphPos = _visibleCorner + _mouseDragPos;
+                    Coord mouseGraphPos = _visibleCorner + (Coord)_mouseDragPos / _variableZoom;
                     if (_unitSnap || _angleSnap || _gridUnitSnap)
                     {
                         Coord center = FindVertexRepositioning(mouseGraphPos);
@@ -335,7 +358,7 @@ namespace TikzGraphGen.Visualization
                     break;
                 case SelectedTool.Eraser:
                     if (_isDragging)
-                        e.Graphics.FillEllipse(new SolidBrush(ACTION_HIGHLIGHT_COLOR), ((Coord)_mouseDragPos).X - _rsc.ToolInfo.EraserInfo.Radius, ((Coord)_mouseDragPos).Y - _rsc.ToolInfo.EraserInfo.Radius, 2 * _rsc.ToolInfo.EraserInfo.Radius, 2 * _rsc.ToolInfo.EraserInfo.Radius);
+                        e.Graphics.FillEllipse(new SolidBrush(ACTION_HIGHLIGHT_COLOR), ((Coord)_mouseDragPos / _variableZoom).X - _rsc.ToolInfo.EraserInfo.Radius, ((Coord)_mouseDragPos / _variableZoom).Y - _rsc.ToolInfo.EraserInfo.Radius, 2 * _rsc.ToolInfo.EraserInfo.Radius, 2 * _rsc.ToolInfo.EraserInfo.Radius);
                     break;
                 case SelectedTool.Select:
                     if (_selectedSubgraph != null && _isDragging)
@@ -344,7 +367,13 @@ namespace TikzGraphGen.Visualization
                     break;
                 case SelectedTool.AreaSelect:
                     if (_isDragging)
-                        e.Graphics.FillRectangle(new SolidBrush(SELECTED_HIGHLIGHT_COLOR), ((Point)_mouseDownPos).X, ((Point)_mouseDownPos).Y, _mouseDragPos.X - ((Point)_mouseDownPos).X, _mouseDragPos.Y - ((Point)_mouseDownPos).Y);
+                        e.Graphics.FillRectangle(new SolidBrush(SELECTED_HIGHLIGHT_COLOR), ((Point)_mouseDownPos).X / _variableZoom, ((Point)_mouseDownPos).Y / _variableZoom, (_mouseDragPos.X - ((Point)_mouseDownPos).X) / _variableZoom, (_mouseDragPos.Y - ((Point)_mouseDownPos).Y) / _variableZoom);
+                    break;
+                case SelectedTool.Lasso:
+                    if (_lassoPts.Count == 2)
+                        e.Graphics.DrawLine(new Pen(new SolidBrush(SELECTED_HIGHLIGHT_COLOR)), _lassoPts[0] - _visibleCorner, _lassoPts[1] - _visibleCorner);
+                    else if (_lassoPts.Count >= 3)
+                        e.Graphics.FillPolygon(new SolidBrush(SELECTED_HIGHLIGHT_COLOR), _lassoPts.Append(_lassoPts[0]).Select(p => (PointF)(p - _visibleCorner)).ToArray());
                     break;
                 default:
                     throw new NotImplementedException();
@@ -510,19 +539,7 @@ namespace TikzGraphGen.Visualization
 
         public void TikzDrawingWindow_Click(object sender, MouseEventArgs e)
         {
-            if (ModifierKeys == Keys.Control)
-            {
-                for (int i = 0; i < e.Delta; i++)
-                {
-                    ZoomIn();
-                }
-                for (int i = e.Delta; i < 0; i++)
-                {
-                    ZoomOut();
-                }
-            }
-
-            Coord mousePos = e.Location + _visibleCorner;
+            Coord mousePos = _visibleCorner + (Coord)e.Location / _variableZoom;
 
             switch (_rsc.CurrentTool)
             {
@@ -532,10 +549,12 @@ namespace TikzGraphGen.Visualization
                     break;
                 case SelectedTool.Edge:
                     if (_firstVertex == null)
-                        _firstVertex = GetVerticesIn(mousePos).FirstOrDefault();
+                    {
+                        _firstVertex = GetVerticesInCircle(_graph, mousePos).FirstOrDefault();
+                    }
                     else
                     {
-                        Vertex _secondVertex = GetVerticesIn(mousePos).FirstOrDefault();
+                        Vertex _secondVertex = GetVerticesInCircle(_graph, mousePos).FirstOrDefault();
                         if (_firstVertex != null && _secondVertex != null && _firstVertex != _secondVertex && !_firstVertex.IsAdjacentTo(_secondVertex)) //TODO: Make support loops & multiedges later (give warning or automatically curve lines) (A -> A)
                             _graph.CreateEdge(_firstVertex, _secondVertex, _rsc.ToolInfo.EdgeInfo, _rsc.ToolInfo.EdgeCapInfo);
 
@@ -569,6 +588,18 @@ namespace TikzGraphGen.Visualization
                         _selectedSubgraph = _graph.GetSubgraphTouchingCircle(mousePos, 1); //Very small selector to try and only select what is directly clicked on
                     break;
                 case SelectedTool.AreaSelect:
+                    break;
+                case SelectedTool.Lasso:
+                    if(!_isDragging)
+                    {
+                        if (_lassoPts.Count > 1 && (Coord.DistanceFrom(mousePos, _lassoPts[0]) < _rsc.ToolInfo.EraserInfo.Radius || Coord.DistanceFrom(mousePos, _lassoPts[^1]) < DRAG_SENSITIVITY))
+                        {
+                            _selectedSubgraph = _graph.GetSubgraphTouchingPolygon(_lassoPts.Append(_lassoPts[0]).Select(p => (Coord)p).ToList());
+                            _lassoPts.Clear();
+                        }
+                        else
+                            _lassoPts.Add(mousePos);
+                    }
                     break;
                 default:
                     throw new NotImplementedException();
@@ -629,15 +660,18 @@ namespace TikzGraphGen.Visualization
 
         private void DragEvent(object sender, MouseEventArgs e)
         {
-            Coord mousePos = e.Location + _visibleCorner;
+            Coord mousePos = _visibleCorner + (Coord)e.Location / _variableZoom;
 
             switch (_rsc.CurrentTool)
             {
                 case SelectedTool.Vertex:
+                case SelectedTool.EdgeCap:
+                case SelectedTool.AreaSelect:
                     break;
                 case SelectedTool.Edge:
-                    if (_mouseDownPos != null)
-                        _firstVertex = GetVerticesIn(_mouseDownPos + _visibleCorner).FirstOrDefault();
+                    _firstVertex = GetVerticesInCircle(_graph, _visibleCorner + (Coord)_mouseDownPos / _variableZoom).FirstOrDefault();
+                    if(_firstVertex != null)
+                        _rsc.ModifyToolPermission(false);
                     break;
                 case SelectedTool.Eraser:
                     Graph sub = _graph.GetSubgraphTouchingCircle(mousePos, _rsc.ToolInfo.EraserInfo.Radius);
@@ -645,18 +679,32 @@ namespace TikzGraphGen.Visualization
                         _graph.DeleteSubgraph(sub);
                     break;
                 case SelectedTool.Select:
-                    if (!_isDragging)
+                    if (!_isDragging) //Only sets subgraph when first moving mouse enough to start dragging (instead of every frame)
                     {
                         //Only sets subgraph if the selected subgraph is not being clicked
-                        if (_selectedSubgraph == null || _selectedSubgraph.GetSubgraphTouchingCircle(_mouseDownPos + _visibleCorner, 1).IsEmpty())
-                            _selectedSubgraph = _graph.GetSubgraphTouchingCircle(_mouseDownPos + _visibleCorner, 1); //Very small selector to try and only click what is directly clicked on
+                        if (_selectedSubgraph == null || _selectedSubgraph.GetSubgraphTouchingCircle(_visibleCorner + (Coord)_mouseDownPos / _variableZoom, 1).IsEmpty())
+                            _selectedSubgraph = _graph.GetSubgraphTouchingCircle(_visibleCorner + (Coord)_mouseDownPos / _variableZoom, 1); //Very small selector to try and only click what is directly clicked on
                         
                         _graph.RemoveSubgraph(_selectedSubgraph, true);
+                        _rsc.ModifyToolPermission(false);
                     }
-                    _selectedSubgraph.Translate(mousePos - (_mouseDragPos + _visibleCorner));
+                    _selectedSubgraph.Translate(((Coord)e.Location - _mouseDragPos) / _variableZoom);
                     break;
-                case SelectedTool.EdgeCap:
-                case SelectedTool.AreaSelect:
+                case SelectedTool.Lasso:
+                    if (_isDragging)
+                        _lassoPts.RemoveAt(_lassoPts.Count - 1);
+
+                    if (_lassoPts.Count > 0 && Coord.DistanceFrom(mousePos, _lassoPts[0]) < _rsc.ToolInfo.EraserInfo.Radius)
+                        _lassoPts.Add(_lassoPts[0]);
+                    else if(_lassoPts.Count == 0) //If first lasso movement is a mouse drag, instantly creates line rather than ignoring dragging part
+                    {
+                        _lassoPts.Add(_visibleCorner + (Coord)_mouseDownPos / _variableZoom);
+                        _lassoPts.Add(mousePos);
+                    }
+                    else
+                        _lassoPts.Add(mousePos);
+
+                    _rsc.ModifyToolPermission(false);
                     break;
                 default:
                     throw new NotImplementedException();
@@ -675,18 +723,30 @@ namespace TikzGraphGen.Visualization
                 case SelectedTool.Eraser:
                     break;
                 case SelectedTool.Edge:
-                    Vertex _secondVertex = GetVerticesIn(_visibleCorner + e.Location).FirstOrDefault();
+                    Vertex _secondVertex = GetVerticesInCircle(_graph, _visibleCorner + e.Location).FirstOrDefault();
 
                     if (_firstVertex != null && _secondVertex != null && _isDragging && _firstVertex != _secondVertex && !_firstVertex.IsAdjacentTo(_secondVertex)) //TODO: Make support loops & multiedges later (give warning or automatically curve lines) (A -> A)
                         _graph.CreateEdge(_firstVertex, _secondVertex, _rsc.ToolInfo.EdgeInfo, _rsc.ToolInfo.EdgeCapInfo);
+
+                    _rsc.ModifyToolPermission(true);
                     break;
                 case SelectedTool.Select:
                     _graph.AddSubgraph(_selectedSubgraph, true);
+                    _rsc.ModifyToolPermission(true);
                     break;
                 case SelectedTool.AreaSelect:
-                    Coord tlCorner = new(MathF.Min((_mouseDownPos + _visibleCorner).X, (_mouseDragPos + _visibleCorner).X), MathF.Min((_mouseDownPos + _visibleCorner).Y, (_mouseDragPos + _visibleCorner).Y));
-                    Coord brCorner = new(MathF.Max((_mouseDownPos + _visibleCorner).X, (_mouseDragPos + _visibleCorner).X), MathF.Max((_mouseDownPos + _visibleCorner).Y, (_mouseDragPos + _visibleCorner).Y));
+                    Coord downPos = _visibleCorner + (Coord)_mouseDownPos / _variableZoom, dragPos = _visibleCorner + (Coord)_mouseDragPos / _variableZoom;
+                    Coord tlCorner = new(MathF.Min(downPos.X, dragPos.X), MathF.Min(downPos.Y, dragPos.Y));
+                    Coord brCorner = new(MathF.Max(downPos.X, dragPos.X), MathF.Max(downPos.Y, dragPos.Y));
                     _selectedSubgraph = _graph.GetSubgraphWithin(tlCorner, brCorner.X - tlCorner.X, brCorner.Y - tlCorner.Y);
+                    break;
+                case SelectedTool.Lasso:
+                    if (_isDragging && _lassoPts.Count > 2 && _lassoPts[^1].Equals(_lassoPts[0]))
+                    {
+                        _selectedSubgraph = _graph.GetSubgraphTouchingPolygon(_lassoPts.Select(p => (Coord)p).ToList());
+                        _lassoPts.Clear();
+                    }
+                    _rsc.ModifyToolPermission(true);
                     break;
                 default:
                     throw new NotImplementedException();
@@ -699,22 +759,13 @@ namespace TikzGraphGen.Visualization
             Refresh();
         }
 
-        private List<Vertex> GetVerticesIn(Coord c, float radius = 0)
+        private static List<Vertex> GetVerticesInCircle(Graph g, Coord c)
         {
-            return _graph.ViewVertices().FindAll(v => c.X >= v.Offset.X - v.Style.Radius - (v.Style.XRadius / 2) - radius &&
-                   c.Y >= v.Offset.Y - v.Style.Radius - (v.Style.YRadius / 2) - radius &&
-                   c.X <= v.Offset.X + v.Style.Radius + (v.Style.XRadius / 2) + radius &&
-                   c.Y <= v.Offset.Y + v.Style.Radius + (v.Style.XRadius / 2) + radius);
-        }
-        private List<Edge> GetEdgesIn(Coord coord, float radius = 0)
-        {
-            return _graph.ViewEdges().FindAll(e =>
-            {
-                float a = e.ViewSource().Offset.Y - e.ViewDestination().Offset.Y;
-                float b = e.ViewDestination().Offset.X - e.ViewSource().Offset.X;
-                float c = (e.ViewSource().Offset.X * e.ViewDestination().Offset.Y) - (e.ViewDestination().Offset.X * e.ViewSource().Offset.Y);
-                return radius >= Math.Abs(a * coord.X + b * coord.Y + c) / Math.Sqrt(Math.Pow(a, 2) + Math.Pow(b, 2));
-            });
+            return g.ViewVertices().FindAll(v =>
+                   c.X >= v.Offset.X - v.Style.Radius - (v.Style.XRadius / 2) &&
+                   c.Y >= v.Offset.Y - v.Style.Radius - (v.Style.YRadius / 2) &&
+                   c.X <= v.Offset.X + v.Style.Radius + (v.Style.XRadius / 2) &&
+                   c.Y <= v.Offset.Y + v.Style.Radius + (v.Style.XRadius / 2));
         }
     }
 }
