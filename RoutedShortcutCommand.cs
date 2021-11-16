@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
 using TikzGraphGen.Visualization;
-using static TikzGraphGen.EdgeLineStyle;
 using static TikzGraphGen.Visualization.TikzDrawingWindow;
 
 namespace TikzGraphGen
@@ -39,8 +38,10 @@ namespace TikzGraphGen
 
         public event CurrentTool_Change CurrentToolChanged;
         public event ToolInfo_Change ToolInfoChanged;
-        public event CanUndo_Change CanUndoStatusChanged;
-        public event CanRedo_Change CanRedoStatusChanged;
+        public event Edit_Change CanUndoStatusChanged;
+        public event Edit_Change CanRedoStatusChanged;
+
+        public event ZoomPercent_Change ZoomPercentageChanged;
 
         public RoutedShortcutCommand()
         {
@@ -155,10 +156,12 @@ namespace TikzGraphGen
          **/
         public void ModifyToolPermission(bool canChange) => _canChangeTool = canChange;
 
+        public void SetZoomPercentage(float percent) => ZoomPercentageChanged(percent);
+
         public delegate void CurrentTool_Change(SelectedTool tool);
         public delegate void ToolInfo_Change(ToolSettingDictionary toolInfo);
-        public delegate void CanUndo_Change(bool canUndo);
-        public delegate void CanRedo_Change(bool canRedo);
+        public delegate void Edit_Change(bool canChange);
+        public delegate void ZoomPercent_Change(float percentage);
 
         public delegate void GeneralCommand();
     }

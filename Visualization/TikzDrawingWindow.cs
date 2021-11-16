@@ -8,6 +8,8 @@ using TikzGraphGen.GraphData;
 using static TikzGraphGen.ToolSettingDictionary;
 
 //Next goals:
+//Fix Set Ratio (link to drawing window) and Zoom Fit (account for angular radius offset + make actually work)
+//Shape tool to evenly space vertices (and menu Shape options)
 //Implement labels for editing vertices or creating labels in space (specially modified vertices with tag to not be picked up in algorithms
 //Implement label edge snap (find mid point of edge (create function that is overriden in bent/curved edge) and find instantaneous angle at that point (also implement a function)
 //                                then, check if mouse is above or below the point. Add text at point above or below correspondingly, spaced away along perpendicular line by pixel amount determined by LabelToolInfo's edgeSpacing property
@@ -142,6 +144,17 @@ namespace TikzGraphGen.Visualization
             _rsc.ToggleUnitGrid = () => { _drawUnitGrid = !_drawUnitGrid; Refresh(); };
             _rsc.ToggleLabelEdgeSnap = () => { _labelEdgeSnap = !_labelEdgeSnap; Refresh(); };
             _rsc.SelectAll = () => { _selectedSubgraph = _graph; Refresh(); };
+
+            _rsc.ZoomPercentageChanged += (f) => { 
+                _variableZoom = f;
+                for (int pos = FIXED_ZOOM_LEVEL_PERCENT.Length - 1; pos >= 0; pos--)
+                {
+                    if (FIXED_ZOOM_LEVEL_PERCENT[pos] != f)
+                        continue;
+
+                    _fixedZoomLevel = pos;
+                }
+            };
         }
 
         public bool HasUnsavedChanges()
@@ -194,9 +207,9 @@ namespace TikzGraphGen.Visualization
             else
             {
                 int pos;
-                for(pos = 0; pos < FIXED_ZOOM_LEVEL_PERCENT.Length - 1; pos++)
+                for(pos = FIXED_ZOOM_LEVEL_PERCENT.Length - 1; pos >= 0; pos--)
                 {
-                    if(FIXED_ZOOM_LEVEL_PERCENT[pos] < _variableZoom)
+                    if(FIXED_ZOOM_LEVEL_PERCENT[pos] >= _variableZoom)
                         break;
                 }
                 _fixedZoomLevel = pos;
@@ -224,9 +237,9 @@ namespace TikzGraphGen.Visualization
             else
             {
                 int pos;
-                for (pos = FIXED_ZOOM_LEVEL_PERCENT.Length - 1; pos > 0; pos--)
+                for (pos = 0; pos <= FIXED_ZOOM_LEVEL_PERCENT.Length - 1; pos++)
                 {
-                    if (FIXED_ZOOM_LEVEL_PERCENT[pos] > _variableZoom)
+                    if (FIXED_ZOOM_LEVEL_PERCENT[pos] <= _variableZoom)
                         break;
                 }
                 _fixedZoomLevel = pos;
@@ -237,9 +250,10 @@ namespace TikzGraphGen.Visualization
 
         public void ZoomFit()
         {
-            Coord bounds = _graph.GetBounds();
-            float xRatio = Width / bounds.X;
-            float yRatio = Height / bounds.Y;
+            (Coord min, Coord max) bounds = _graph.GetBounds();
+            float xRatio = Width / (bounds.max.X - bounds.min.X);
+            float yRatio = Height / (bounds.max.Y - bounds.min.Y);
+            _visibleCorner = bounds.min;
             _variableZoom = Math.Min(xRatio, yRatio);
             _fixedZoomLevel = UNIQUE_ZOOM_LEVEL;
             Refresh();
@@ -257,7 +271,8 @@ namespace TikzGraphGen.Visualization
             base.OnPaint(e);
 
             e.Graphics.ScaleTransform(_variableZoom, _variableZoom);
-            Graph sub = _graph.GetSubgraphWithin(_visibleCorner, (ClientRectangle.Width + _visibleCorner.X), (ClientRectangle.Height + _visibleCorner.Y));
+            Graph sub = _graph.GetSubgraphTouchingPolygon(new() { _visibleCorner, new(_visibleCorner.X + ClientRectangle.Width / _variableZoom, _visibleCorner.Y),
+                                                                  _visibleCorner + new Coord(ClientRectangle.Width, ClientRectangle.Height) / _variableZoom, new(_visibleCorner.X, _visibleCorner.Y + ClientRectangle.Height / _variableZoom) });
 
             if (_drawUnitGrid)
             {

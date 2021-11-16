@@ -174,13 +174,19 @@ namespace TikzGraphGen
         }
 
         /**
-         * Gets outer bound. Minimal bounds are x = 0 and y = 0
+         * Gets bounds. I know, very helpful.
          **/
-        public Coord GetBounds()
+        public (Coord, Coord) GetBounds()
         {
-            float xMax = _vertices.Select(v => v.Offset.X + v.Style.Radius + (v.Style.XRadius / 2)).Max();
-            float yMax = _vertices.Select(v => v.Offset.Y + v.Style.Radius + (v.Style.YRadius / 2)).Max();
-            return new Coord(xMax, yMax);
+            float xMin = float.MaxValue, yMin = float.MaxValue, xMax = float.MinValue, yMax = float.MinValue;
+            foreach(Vertex v in _vertices)
+            {
+                xMin = MathF.Min(xMin, v.Offset.X - v.GetAngularRadius(MathF.PI));
+                yMin = MathF.Min(yMin, v.Offset.Y - v.GetAngularRadius(MathF.PI / 2f));
+                xMax = MathF.Max(xMax, v.Offset.X + v.GetAngularRadius(0));
+                yMax = MathF.Max(yMax, v.Offset.Y + v.GetAngularRadius(MathF.PI * 3 / 2f));
+            }
+            return (new(xMin, yMin), new(xMax, yMax));
         }
 
         public Graph GetSubgraphWithin(Coord visibleCorner, float width, float height)
@@ -188,10 +194,10 @@ namespace TikzGraphGen
             Graph output = new();
             foreach (Vertex v in _vertices)
             {
-                if (v.Offset.X - v.Style.Radius - (v.Style.XRadius / 2) >= visibleCorner.X &&
-                   v.Offset.Y - v.Style.Radius - (v.Style.YRadius / 2) >= visibleCorner.Y &&
-                   v.Offset.X + v.Style.Radius + (v.Style.XRadius / 2) <= visibleCorner.X + width &&
-                   v.Offset.Y + v.Style.Radius + (v.Style.XRadius / 2) <= visibleCorner.Y + height)
+                if (v.Offset.X - v.GetAngularRadius(MathF.PI) >= visibleCorner.X &&
+                   v.Offset.Y - v.GetAngularRadius(MathF.PI / 2f) >= visibleCorner.Y &&
+                   v.Offset.X + v.GetAngularRadius(0) <= visibleCorner.X + width &&
+                   v.Offset.Y + v.GetAngularRadius(MathF.PI * 3 / 2f) <= visibleCorner.Y + height)
                 {
                     output.AddVertex(v, true);
                     v.ViewEdges().Where(e => !output.ViewEdges().Contains(e)).ToList().ForEach(e => output.AddConnectedEdge(e, true));
@@ -200,6 +206,7 @@ namespace TikzGraphGen
 
             return output;
         }
+
         public Graph GetSubgraphTouchingCircle(Coord center, float radius)
         {
             Graph output = new();
@@ -293,7 +300,7 @@ namespace TikzGraphGen
                 return false;
 
             int sum = 0;
-            System.Diagnostics.Debug.WriteLine($"Point {c}");
+
             for (int i = 0; i < pts.Count - 1; i++) //pts ends with pts[0], so going to count - 2 will include every edge
             {
                 if (Math.Max(pts[i].X, pts[i + 1].X) < c.X || Math.Min(pts[i].Y, pts[i + 1].Y) > c.Y || Math.Max(pts[i].Y, pts[i + 1].Y) < c.Y)

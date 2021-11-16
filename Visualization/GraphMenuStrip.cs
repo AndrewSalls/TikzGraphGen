@@ -239,9 +239,9 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.ZoomDec();
             view.DropDownItems.Add(init);
 
-            init = new("Zoom Ratio");
-            init.DropDownItems.AddRange(new ToolStripItem[] {
-                new  ToolStripMenuItem("10%"),
+            ToolStripMenuItem zoom = new("Zoom Ratio");
+            zoom.DropDownItems.AddRange(new ToolStripItem[] {
+                new ToolStripMenuItem("10%"),
                 new ToolStripMenuItem("25%"),
                 new ToolStripMenuItem("50%"),
                 new ToolStripMenuItem("75%"),
@@ -250,8 +250,20 @@ namespace TikzGraphGen.Visualization
                 new ToolStripMenuItem("150%"),
                 new ToolStripMenuItem("200%")
             });
-            ((ToolStripMenuItem)init.DropDownItems[4]).Checked = true;
-            view.DropDownItems.Add(init);
+            ((ToolStripMenuItem)zoom.DropDownItems[4]).Checked = true;
+            for (int i = 0; i < zoom.DropDownItems.Count; i++)
+            {
+                int temp = i;
+                zoom.DropDownItems[temp].Click += (o, e) =>
+                {
+                    for (int j = 0; j < zoom.DropDownItems.Count; j++)
+                        ((ToolStripMenuItem)zoom.DropDownItems[j]).Checked = false;
+
+                    ((ToolStripMenuItem)zoom.DropDownItems[temp]).Checked = true;
+                    _rsc.SetZoomPercentage(new[] { 0.1f, 0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f}[temp]);
+                };
+            }
+            view.DropDownItems.Add(zoom);
 
             init = new("Zoom To Fit") //Make entire graph fit on screen (if possible)
             {

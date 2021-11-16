@@ -62,6 +62,10 @@ namespace TikzGraphGen
             return _incident.ToList();
         }
 
+        /**
+         * Gets the length of a vector going from the center of the vertex to its outer edge at the provided radian.
+         * Always positive (not negative for radii going left)
+         **/
         public float GetAngularRadius(float angle)
         {
             switch(Style.Style)
@@ -71,7 +75,7 @@ namespace TikzGraphGen
                 case VertexBorderStyle.BorderStyle.NoSign:
                     return Style.Radius;
                 case VertexBorderStyle.BorderStyle.Ellipse:
-                    return Style.XRadius * Style.YRadius / MathF.Sqrt(Style.XRadius*Style.XRadius * MathF.Sin(angle) * MathF.Sin(angle) + Style.YRadius*Style.YRadius * MathF.Cos(angle)*MathF.Cos(angle));
+                    return Style.XRadius * Style.YRadius / MathF.Sqrt(Style.XRadius*Style.XRadius * MathF.Sin(angle) * MathF.Sin(angle) + Style.YRadius*Style.YRadius * MathF.Cos(angle) * MathF.Cos(angle));
                 case VertexBorderStyle.BorderStyle.None:
                     return 0;
                 default:
