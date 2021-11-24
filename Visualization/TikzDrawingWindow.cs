@@ -8,21 +8,23 @@ using TikzGraphGen.GraphData;
 using static TikzGraphGen.ToolSettingDictionary;
 
 //Next goals:
-//Fix Set Ratio (link to drawing window) and Zoom Fit (account for angular radius offset + make actually work)
-//Shape tool to evenly space vertices (and menu Shape options)
+//Center graph with zoom fit so that (x or y) that is smaller percentage of editor screen is centered
+
+//Implement Merge
+//Implement Split
 //Implement labels for editing vertices or creating labels in space (specially modified vertices with tag to not be picked up in algorithms
 //Implement label edge snap (find mid point of edge (create function that is overriden in bent/curved edge) and find instantaneous angle at that point (also implement a function)
 //                                then, check if mouse is above or below the point. Add text at point above or below correspondingly, spaced away along perpendicular line by pixel amount determined by LabelToolInfo's edgeSpacing property
 //                                finally, add text rotation style property to LabelToolInfo and text rotation angle property (styles: angle, vertical, horizontal, parallel, perpendicular), which determine angle to write text at
 //                                also add CenterType property (Start of text, end of text, midpoint, auto) - Auto will choose whichever centering will make the text avoid crossing over the text
-//Implement Merge
-//Implement Split
+//Create Hide Tool (hides vertex to allow editing vertices behind it; also include command/button to show all vertices)
 //Implement Weight
 //Implement Tracker
 //Implement redo/undo
 //Implement all of the Transform tools
-//Create Hide Tool (hides vertex to allow editing vertices behind it; also include command/button to show all vertices)
 //Make zooming in/out with shortcuts keep position under cursor at same coordinate
+//Add setting to determine space to leave around ZoomFit on screen (e.g. setting of 1 inch means there is a 1 inch border of unfilled screenspace around the boundary of the graph)
+//Begin implementing some algorithms
 
 namespace TikzGraphGen.Visualization
 {
@@ -31,7 +33,7 @@ namespace TikzGraphGen.Visualization
     {
         public enum SelectedTool
         {
-            Vertex, Edge, EdgeCap, Label, Eraser, Transform, Select, AreaSelect, Lasso, Weight, Tracker, Merge, Split
+            Vertex, Edge, EdgeCap, Label, Eraser, Transform, Shape, Select, AreaSelect, Lasso, Weight, Tracker, Merge, Split
         }
         public static readonly float[] FIXED_ZOOM_LEVEL_PERCENT = new float[] { 16f, 8f, 4f, 3f, 2f, 1f, 1/2f, 1/3f, 1/4f, 1/8f, 1/16f };
         public static readonly float ZOOM_OOB_MULTIPLIER = 0.8f;
@@ -253,9 +255,17 @@ namespace TikzGraphGen.Visualization
             (Coord min, Coord max) bounds = _graph.GetBounds();
             float xRatio = Width / (bounds.max.X - bounds.min.X);
             float yRatio = Height / (bounds.max.Y - bounds.min.Y);
-            _visibleCorner = bounds.min;
+
             _variableZoom = Math.Min(xRatio, yRatio);
             _fixedZoomLevel = UNIQUE_ZOOM_LEVEL;
+
+            Coord shift;
+            if (yRatio < xRatio)
+                shift = new((Width - yRatio * (bounds.max.X - bounds.min.X)) / 2f, 0);
+            else
+                shift = new(0, (Height - xRatio * (bounds.max.Y - bounds.min.Y)) / 2f);
+
+            _visibleCorner = bounds.min - shift / _variableZoom;
             Refresh();
         }
 
@@ -276,10 +286,10 @@ namespace TikzGraphGen.Visualization
 
             if (_drawUnitGrid)
             {
-                for (float x = _visibleCorner.X - _visibleCorner.X % _unitSize; x <= _visibleCorner.X + Width; x += _unitSize)
-                    e.Graphics.DrawLine(new Pen(new SolidBrush(UNIT_GRID_GUIDE_COLOR), UNIT_GRID_GUIDE_WIDTH), x - _visibleCorner.X, 0, x - _visibleCorner.X, Height);
-                for (float y = _visibleCorner.Y - _visibleCorner.Y % _unitSize; y <= _visibleCorner.Y + Height; y += _unitSize)
-                    e.Graphics.DrawLine(new Pen(new SolidBrush(UNIT_GRID_GUIDE_COLOR), UNIT_GRID_GUIDE_WIDTH), 0, y - _visibleCorner.Y, Width, y - _visibleCorner.Y);
+                for (float x = _visibleCorner.X - _visibleCorner.X % _unitSize; x <= _visibleCorner.X + Width / _variableZoom; x += _unitSize)
+                    e.Graphics.DrawLine(new Pen(new SolidBrush(UNIT_GRID_GUIDE_COLOR), UNIT_GRID_GUIDE_WIDTH), x - _visibleCorner.X, 0, x - _visibleCorner.X, Height / _variableZoom);
+                for (float y = _visibleCorner.Y - _visibleCorner.Y % _unitSize; y <= _visibleCorner.Y + Height / _variableZoom; y += _unitSize)
+                    e.Graphics.DrawLine(new Pen(new SolidBrush(UNIT_GRID_GUIDE_COLOR), UNIT_GRID_GUIDE_WIDTH), 0, y - _visibleCorner.Y, Width / _variableZoom, y - _visibleCorner.Y);
             }
             if(_drawBorder) //I'm too lazy to just draw the line segments that are actually visible
                 e.Graphics.DrawRectangle(new Pen(new SolidBrush(BORDER_GUIDE_COLOR), BORDER_GUIDE_WIDTH), -_visibleCorner.X, -_visibleCorner.Y, PAGE_SIZE.Width, PAGE_SIZE.Height);
@@ -333,6 +343,7 @@ namespace TikzGraphGen.Visualization
                 case SelectedTool.Eraser:
                 case SelectedTool.AreaSelect:
                 case SelectedTool.Lasso:
+                case SelectedTool.Shape:
                     break;
                 default:
                     throw new NotImplementedException();
@@ -343,30 +354,11 @@ namespace TikzGraphGen.Visualization
             switch (_rsc.CurrentTool)
             {
                 case SelectedTool.Vertex:
-                    Coord mouseGraphPos = _visibleCorner + (Coord)_mouseDragPos / _variableZoom;
-                    if (_unitSnap || _angleSnap || _gridUnitSnap)
-                    {
-                        Coord center = FindVertexRepositioning(mouseGraphPos);
+                    Coord mouseGraphPos = (Coord)_mouseDragPos / _variableZoom + _visibleCorner;
+                    Coord aligned = FindVertexRepositioning(mouseGraphPos) - _visibleCorner;
 
-                        if (!FindVertexRepositioning(mouseGraphPos).Equals(mouseGraphPos) || _graph.GetPointClosestTo(mouseGraphPos) != null && Coord.DistanceFrom(mouseGraphPos, _graph.GetPointClosestTo(mouseGraphPos).Offset) <= MAX_ANGLE_LINK * _unitSize)
-                        {
-                            Coord adjustedMousePos = center - _visibleCorner;
-                            e.Graphics.FillEllipse(new SolidBrush(ACTION_HIGHLIGHT_COLOR), adjustedMousePos.X - _rsc.ToolInfo.VertexInfo.Radius - _rsc.ToolInfo.VertexInfo.XRadius, adjustedMousePos.Y - _rsc.ToolInfo.VertexInfo.Radius - _rsc.ToolInfo.VertexInfo.YRadius, 2 * _rsc.ToolInfo.VertexInfo.Radius + 2 * _rsc.ToolInfo.VertexInfo.XRadius, 2 * _rsc.ToolInfo.VertexInfo.Radius + 2 * _rsc.ToolInfo.VertexInfo.YRadius);
-                            Coord origin = _graph.GetSubgraphWithin(_visibleCorner, Width, Height).GetPointClosestTo(mouseGraphPos)?.Offset;
-                            if(origin != null)
-                                adjustedMousePos = origin - _visibleCorner;
-                            if (!_gridUnitSnap && _unitSnap && origin != null) //Unit snap rendering
-                            {
-                                for (float dist = 0; dist <= MAX_ANGLE_LINK * _unitSize; dist += _unitSize)
-                                    e.Graphics.DrawEllipse(new Pen(new SolidBrush(ACTION_HIGHLIGHT_COLOR)), adjustedMousePos.X - dist, adjustedMousePos.Y - dist, 2 * dist, 2 * dist);
-                            }
-                            if (!_gridUnitSnap && _angleSnap && origin != null) //Angle snap rendering
-                            {
-                                for (float sum = 0; sum <= 2 * MathF.PI; sum += _angleSnapAmt)
-                                    e.Graphics.DrawLine(new Pen(new SolidBrush(ACTION_HIGHLIGHT_COLOR)), adjustedMousePos, adjustedMousePos + (MAX_ANGLE_LINK * _unitSize) * new Coord(MathF.Cos(sum), MathF.Sin(sum)));
-                            }
-                        }
-                    }
+                    if (!aligned.Equals(mouseGraphPos) || _graph.GetPointClosestTo(mouseGraphPos) != null && Coord.DistanceFrom(mouseGraphPos, _graph.GetPointClosestTo(mouseGraphPos).Offset) <= MAX_ANGLE_LINK * _unitSize)
+                        e.Graphics.FillEllipse(new SolidBrush(ACTION_HIGHLIGHT_COLOR), aligned.X - _rsc.ToolInfo.VertexInfo.Radius - _rsc.ToolInfo.VertexInfo.XRadius, aligned.Y - _rsc.ToolInfo.VertexInfo.Radius - _rsc.ToolInfo.VertexInfo.YRadius, 2 * _rsc.ToolInfo.VertexInfo.Radius + 2 * _rsc.ToolInfo.VertexInfo.XRadius, 2 * _rsc.ToolInfo.VertexInfo.Radius + 2 * _rsc.ToolInfo.VertexInfo.YRadius);
                     break;
                 case SelectedTool.Edge:
                 case SelectedTool.EdgeCap:
@@ -374,6 +366,43 @@ namespace TikzGraphGen.Visualization
                 case SelectedTool.Eraser:
                     if (_isDragging)
                         e.Graphics.FillEllipse(new SolidBrush(ACTION_HIGHLIGHT_COLOR), ((Coord)_mouseDragPos / _variableZoom).X - _rsc.ToolInfo.EraserInfo.Radius, ((Coord)_mouseDragPos / _variableZoom).Y - _rsc.ToolInfo.EraserInfo.Radius, 2 * _rsc.ToolInfo.EraserInfo.Radius, 2 * _rsc.ToolInfo.EraserInfo.Radius);
+                    break;
+                case SelectedTool.Shape:
+                    if (_isDragging)
+                    {
+                        Coord mousePoint;
+
+                        if (_rsc.ToolInfo.ShapeInfo.CenterPoint)
+                            mousePoint = FindVertexRepositioning((Coord)_mouseDragPos / _variableZoom, (Coord)_mouseDownPos / _variableZoom) * _variableZoom;
+                        else
+                            mousePoint = (FindVertexRepositioning((Coord)_mouseDragPos / _variableZoom + _visibleCorner) - _visibleCorner) * _variableZoom;
+
+                        float startAngle = Coord.AngleBetween(mousePoint, _mouseDownPos);
+                        float rotation = 2 * MathF.PI / _rsc.ToolInfo.ShapeInfo.Points;
+                        float pointDistance = Coord.DistanceFrom(mousePoint, _mouseDownPos) / _variableZoom;
+                        PointF[] points = Enumerable.Range(0, _rsc.ToolInfo.ShapeInfo.Points)
+                                                    .Select(i => (Coord)_mouseDownPos / _variableZoom + pointDistance * Coord.AngleUnit(startAngle + i * rotation))
+                                                    .Select(c => new PointF(c.X, c.Y))
+                                                    .ToArray();
+                        e.Graphics.FillPolygon(new SolidBrush(SELECTED_HIGHLIGHT_COLOR), points);
+                        VertexToolInfo defaultVertex = _rsc.ToolInfo.VertexInfo;
+                        defaultVertex.BorderColor = ACTION_HIGHLIGHT_COLOR;
+                        defaultVertex.FillColor = ACTION_HIGHLIGHT_COLOR;
+                        foreach (PointF p in points)
+                            DrawVertex(e.Graphics, new Vertex(defaultVertex, p), p);
+                        if (_rsc.ToolInfo.ShapeInfo.CenterPoint)
+                            DrawVertex(e.Graphics, new Vertex(defaultVertex, _mouseDownPos), (Coord)_mouseDownPos / _variableZoom);
+                        if(_rsc.ToolInfo.ShapeInfo.OuterRing)
+                        {
+                            EdgeToolInfo defaultEdge = _rsc.ToolInfo.EdgeInfo;
+                            EdgeCapToolInfo defaultEdgeCap = _rsc.ToolInfo.EdgeCapInfo;
+                            defaultEdgeCap.Style = EdgeLineStyle.EdgeCapShape.None;
+                            defaultEdge.Color = ACTION_HIGHLIGHT_COLOR;
+
+                            for (int i = 0; i < points.Count(); i++)
+                                DrawEdge(e.Graphics, new Edge(defaultEdge, defaultEdgeCap, new Vertex(defaultVertex, points[i] + _visibleCorner), new Vertex(defaultVertex, points[(i + 1) % points.Length] + _visibleCorner)));
+                        }
+                    }
                     break;
                 case SelectedTool.Select:
                     if (_selectedSubgraph != null && _isDragging)
@@ -392,6 +421,37 @@ namespace TikzGraphGen.Visualization
                     break;
                 default:
                     throw new NotImplementedException();
+            }
+
+            if(_rsc.CurrentTool.Equals(SelectedTool.Vertex) || (_rsc.CurrentTool.Equals(SelectedTool.Shape) && _mouseDownPos != null))
+            {
+                Coord mouseGraphPos = _visibleCorner + (Coord)_mouseDragPos / _variableZoom;
+                Coord center;
+                if (_rsc.CurrentTool.Equals(SelectedTool.Shape) && _rsc.ToolInfo.ShapeInfo.CenterPoint)
+                    center = FindVertexRepositioning(mouseGraphPos, _visibleCorner + (Coord)_mouseDownPos / _variableZoom);
+                else
+                    center = FindVertexRepositioning(mouseGraphPos);
+
+                if (!center.Equals(mouseGraphPos) || _graph.GetPointClosestTo(mouseGraphPos) != null && Coord.DistanceFrom(mouseGraphPos, _graph.GetPointClosestTo(mouseGraphPos).Offset) <= MAX_ANGLE_LINK * _unitSize)
+                {
+                    Coord origin;
+                    if (_rsc.CurrentTool.Equals(SelectedTool.Shape) && _rsc.ToolInfo.ShapeInfo.CenterPoint)
+                        origin = _visibleCorner + (Coord)_mouseDownPos / _variableZoom;
+                    else
+                        origin = _graph.GetSubgraphWithin(_visibleCorner, Width, Height).GetPointClosestTo(mouseGraphPos)?.Offset;
+                    Coord adjustedMousePos = (origin ?? center) - _visibleCorner;
+
+                    if (!_gridUnitSnap && _unitSnap && origin != null) //Unit snap rendering
+                    {
+                        for (float dist = 0; dist <= MAX_ANGLE_LINK * _unitSize; dist += _unitSize)
+                            e.Graphics.DrawEllipse(new Pen(new SolidBrush(ACTION_HIGHLIGHT_COLOR)), adjustedMousePos.X - dist, adjustedMousePos.Y - dist, 2 * dist, 2 * dist);
+                    }
+                    if (!_gridUnitSnap && _angleSnap && origin != null) //Angle snap rendering
+                    {
+                        for (float sum = 0; sum <= 2 * MathF.PI; sum += _angleSnapAmt)
+                            e.Graphics.DrawLine(new Pen(new SolidBrush(ACTION_HIGHLIGHT_COLOR)), adjustedMousePos, adjustedMousePos + (MAX_ANGLE_LINK * _unitSize) * new Coord(MathF.Cos(sum), MathF.Sin(sum)));
+                    }
+                }
             }
         }
 
@@ -564,9 +624,7 @@ namespace TikzGraphGen.Visualization
                     break;
                 case SelectedTool.Edge:
                     if (_firstVertex == null)
-                    {
                         _firstVertex = GetVerticesInCircle(_graph, mousePos).FirstOrDefault();
-                    }
                     else
                     {
                         Vertex _secondVertex = GetVerticesInCircle(_graph, mousePos).FirstOrDefault();
@@ -603,6 +661,7 @@ namespace TikzGraphGen.Visualization
                         _selectedSubgraph = _graph.GetSubgraphTouchingCircle(mousePos, 1); //Very small selector to try and only select what is directly clicked on
                     break;
                 case SelectedTool.AreaSelect:
+                case SelectedTool.Shape:
                     break;
                 case SelectedTool.Lasso:
                     if(!_isDragging)
@@ -621,9 +680,9 @@ namespace TikzGraphGen.Visualization
             }
         }
 
-        private Coord FindVertexRepositioning(Coord drawPos) //TODO: Add shortcut to lock snapping to the current closest vertex, so that intersecting snapping ranges are less annoying
+        private Coord FindVertexRepositioning(Coord drawPos, Coord relativeTo = null) //TODO: Add shortcut to lock snapping to the current closest vertex, so that intersecting snapping ranges are less annoying. To do this, save closest vertex (or allow selecting one) then use that value for the optional parameter
         {
-            Coord origin = _graph.GetPointClosestTo(drawPos)?.Offset ?? drawPos;
+            Coord origin = relativeTo ?? _graph.GetPointClosestTo(drawPos)?.Offset ?? drawPos;
 
             float angle = Coord.AngleBetween(drawPos, origin);
             float offset = Coord.DistanceFrom(drawPos, origin);
@@ -641,12 +700,18 @@ namespace TikzGraphGen.Visualization
                 angle = MathF.Max(0, MathF.Min(Round(angle, _angleSnapAmt), 2 * MathF.PI));
                 drawPos = new(origin.X + MathF.Cos(angle) * offset, origin.Y + MathF.Sin(angle) * offset);
             }
-            if(_gridUnitSnap)
-                drawPos = new(Round(drawPos.X, _unitSize), Round(drawPos.Y, _unitSize));
+            if (_gridUnitSnap)
+                drawPos = new(Round(drawPos.X + _visibleCorner.X, _unitSize) - _visibleCorner.X, Round(drawPos.Y + _visibleCorner.Y, _unitSize) - _visibleCorner.Y);
 
-            return drawPos;
+                return drawPos;
         }
 
+        /**
+         * Rounds a number to the nearest multiple of a provided number
+         * 
+         * startVal is value being rounded
+         * range is interval such that k*range <= startVal <= (k + 1)*range
+         **/
         private static float Round(float startVal, float range)
         {
             if (MathF.Abs(startVal % range) > (range / 2f))
@@ -682,6 +747,7 @@ namespace TikzGraphGen.Visualization
                 case SelectedTool.Vertex:
                 case SelectedTool.EdgeCap:
                 case SelectedTool.AreaSelect:
+                case SelectedTool.Shape:
                     break;
                 case SelectedTool.Edge:
                     _firstVertex = GetVerticesInCircle(_graph, _visibleCorner + (Coord)_mouseDownPos / _variableZoom).FirstOrDefault();
@@ -744,6 +810,36 @@ namespace TikzGraphGen.Visualization
                         _graph.CreateEdge(_firstVertex, _secondVertex, _rsc.ToolInfo.EdgeInfo, _rsc.ToolInfo.EdgeCapInfo);
 
                     _rsc.ModifyToolPermission(true);
+                    break;
+                case SelectedTool.Shape:
+                    if (_isDragging)
+                    {
+                        Coord rescaledPoint;
+                        if (_rsc.ToolInfo.ShapeInfo.CenterPoint)
+                            rescaledPoint = FindVertexRepositioning((Coord)_mouseDragPos / _variableZoom, (Coord)_mouseDownPos / _variableZoom) * _variableZoom;
+                        else
+                            rescaledPoint = FindVertexRepositioning((Coord)_mouseDragPos / _variableZoom) * _variableZoom;
+
+                        float startAngle = Coord.AngleBetween(rescaledPoint, _mouseDownPos);
+                        float rotation = 2 * MathF.PI / _rsc.ToolInfo.ShapeInfo.Points;
+                        float pointDistance = Coord.DistanceFrom(rescaledPoint, _mouseDownPos) / _variableZoom;
+                        IEnumerable<Coord> points = Enumerable.Range(0, _rsc.ToolInfo.ShapeInfo.Points)
+                                                    .Select(i => (Coord)_mouseDownPos / _variableZoom + _visibleCorner + pointDistance * Coord.AngleUnit(startAngle + i * rotation));
+
+                        Graph sub = new();
+                        foreach (Coord c in points)
+                            sub.CreateVertex(c, _rsc.ToolInfo.VertexInfo, true);
+
+                        if (_rsc.ToolInfo.ShapeInfo.OuterRing)
+                        {
+                            for (int i = 0; i < sub.ViewVertices().Count(); i++)
+                                sub.CreateEdge(sub.ViewVertices()[i], sub.ViewVertices()[(i + 1) % sub.ViewVertices().Count], _rsc.ToolInfo.EdgeInfo, _rsc.ToolInfo.EdgeCapInfo, true);
+                        }
+                        if (_rsc.ToolInfo.ShapeInfo.CenterPoint)
+                            sub.CreateVertex((Coord)_mouseDownPos / _variableZoom + _visibleCorner, _rsc.ToolInfo.VertexInfo, true);
+
+                        _graph.AddSubgraph(sub);
+                    }
                     break;
                 case SelectedTool.Select:
                     _graph.AddSubgraph(_selectedSubgraph, true);

@@ -309,7 +309,7 @@ namespace TikzGraphGen.Visualization
             init = new("Snap To Unit Grid")
             {
                 ShortcutKeys = Keys.Control | Keys.U,
-                ShortcutKeyDisplayString = "Ctrl U",
+                ShortcutKeyDisplayString = "Ctrl Shift G",
                 ShowShortcutKeys = true,
                 Checked = false,
                 CheckOnClick = true
@@ -438,6 +438,20 @@ namespace TikzGraphGen.Visualization
             init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Transform;
             tool.DropDownItems.Add(init);
 
+            init = new("Shape")
+            {
+                ShortcutKeys = Keys.Control | Keys.P,
+                ShortcutKeyDisplayString = "Ctrl P",
+                ShowShortcutKeys = true
+            };
+            init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Shape;
+            tool.DropDownItems.Add(init);
+
+            init = new("Shape Options");
+            tool.DropDownItems.Add(init);
+
+            tool.DropDownItems.Add(new ToolStripSeparator());
+
             init = new("Select")
             {
                 ShortcutKeys = Keys.Control | Keys.E,
@@ -564,26 +578,29 @@ namespace TikzGraphGen.Visualization
                     case SelectedTool.Transform:
                         ((ToolStripMenuItem)tool.DropDownItems[8]).Checked = true;
                         break;
-                    case SelectedTool.Select:
+                    case SelectedTool.Shape:
                         ((ToolStripMenuItem)tool.DropDownItems[9]).Checked = true;
                         break;
-                    case SelectedTool.AreaSelect:
-                        ((ToolStripMenuItem)tool.DropDownItems[10]).Checked = true;
+                    case SelectedTool.Select:
+                        ((ToolStripMenuItem)tool.DropDownItems[11]).Checked = true;
                         break;
-                    case SelectedTool.Lasso:
+                    case SelectedTool.AreaSelect:
                         ((ToolStripMenuItem)tool.DropDownItems[12]).Checked = true;
                         break;
-                    case SelectedTool.Weight:
+                    case SelectedTool.Lasso:
                         ((ToolStripMenuItem)tool.DropDownItems[14]).Checked = true;
                         break;
+                    case SelectedTool.Weight:
+                        ((ToolStripMenuItem)tool.DropDownItems[16]).Checked = true;
+                        break;
                     case SelectedTool.Tracker:
-                        ((ToolStripMenuItem)tool.DropDownItems[17]).Checked = true;
+                        ((ToolStripMenuItem)tool.DropDownItems[19]).Checked = true;
                         break;
                     case SelectedTool.Merge:
-                        ((ToolStripMenuItem)tool.DropDownItems[18]).Checked = true;
+                        ((ToolStripMenuItem)tool.DropDownItems[20]).Checked = true;
                         break;
                     case SelectedTool.Split:
-                        ((ToolStripMenuItem)tool.DropDownItems[21]).Checked = true;
+                        ((ToolStripMenuItem)tool.DropDownItems[23]).Checked = true;
                         break;
                     default:
                         throw new NotImplementedException();

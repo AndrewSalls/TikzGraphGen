@@ -48,6 +48,12 @@ namespace TikzGraphGen
         public struct TransformToolInfo
         {
         }
+        public struct ShapeToolInfo
+        {
+            public int Points { get; set; }
+            public bool CenterPoint { get; set; }
+            public bool OuterRing { get; set; }
+        }
         /*public struct SelectToolInfo
         {
         }
@@ -77,6 +83,7 @@ namespace TikzGraphGen
         public LabelToolInfo LabelInfo;
         public EraserToolInfo EraserInfo;
         public TransformToolInfo TransformInfo;
+        public ShapeToolInfo ShapeInfo;
         //public SelectToolInfo SelectInfo;
         //public AreaSelectToolInfo AreaSelectInfo;
         //public LassoToolInfo LassoInfo;
@@ -94,6 +101,7 @@ namespace TikzGraphGen
             InitializeDefaultLabel();
             InitializeDefaultEraser();
             InitializeDefaultTransform();
+            InitializeDefaultShape();
             //InitializeDefaultSelect();
             //InitializeDefaultAreaSelect();
             //InitializeDefaultLasso();
@@ -144,6 +152,12 @@ namespace TikzGraphGen
         private void InitializeDefaultTransform()
         {
 
+        }
+        private void InitializeDefaultShape()
+        {
+            ShapeInfo.Points = 5;
+            ShapeInfo.CenterPoint = false;
+            ShapeInfo.OuterRing = true;
         }
        /* private void InitializeDefaultSelect()
         {
