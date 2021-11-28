@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using static TikzGraphGen.Visualization.TikzDrawingWindow;
 
@@ -39,76 +41,17 @@ namespace TikzGraphGen.Visualization
         private ToolStripMenuItem InitializeFileOptions()
         {
             ToolStripMenuItem file = new("&File");
-
-            ToolStripMenuItem init = new("New Project")
-            {
-                ShortcutKeys = Keys.Control | Keys.Shift | Keys.N,
-                ShortcutKeyDisplayString = "Ctrl Shift N",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.NewProject();
-            file.DropDownItems.Add(init);
-                
-            init = new("Open")
-            {
-                ShortcutKeys = Keys.Control | Keys.O,
-                ShortcutKeyDisplayString = "Ctrl O",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.Open();
-            file.DropDownItems.Add(init);
-
-            init = new("Open Recent");
-            file.DropDownItems.Add(init);
-
-            init = new("Save")
-            {
-                ShortcutKeys = Keys.Control | Keys.S,
-                ShortcutKeyDisplayString = "Ctrl S",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.Save();
-            file.DropDownItems.Add(init);
-
-            init = new("Save As")
-            {
-                ShortcutKeys = Keys.Control | Keys.Shift | Keys.S,
-                ShortcutKeyDisplayString = "Ctrl Shift S",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.SaveAs();
-            file.DropDownItems.Add(init);
-
-            init = new("Export")
-            {
-                ShortcutKeys = Keys.Control | Keys.Shift | Keys.E,
-                ShortcutKeyDisplayString = "Ctrl Shift E",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.Export();
-            file.DropDownItems.Add(init);
-
+            file.DropDownItems.Add(GenerateMenuItem("New Project", Keys.Control | Keys.Shift | Keys.N, "Ctrl Shift N", (o, e) => _rsc.NewProject()));
+            file.DropDownItems.Add(GenerateMenuItem("Open", Keys.Control | Keys.O, "Ctrl O", (o, e) => _rsc.Open()));
+            file.DropDownItems.Add(new ToolStripMenuItem("Open Recent"));
+            file.DropDownItems.Add(GenerateMenuItem("Save", Keys.Control | Keys.S, "Ctrl S", (o, e) => _rsc.Save()));
+            file.DropDownItems.Add(GenerateMenuItem("Save As", Keys.Control | Keys.Shift | Keys.S, "Ctrl Shift S", (o, e) => _rsc.SaveAs()));
+            file.DropDownItems.Add(GenerateMenuItem("Export", Keys.Control | Keys.Shift | Keys.E, "Ctrl Shift E", (o, e) => _rsc.Export()));
             file.DropDownItems.Add(new ToolStripSeparator());
-
-            init = new("Graph Info") //Get number of vertices, edges, directed edges, faces, etc.
-            {
-                ShortcutKeys = Keys.Control | Keys.I,
-                ShortcutKeyDisplayString = "Ctrl I",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.DisplayInfo();
-            file.DropDownItems.Add(init);
-
+            //Get number of vertices, edges, directed edges, faces, etc.
+            file.DropDownItems.Add(GenerateMenuItem("Graph Info", Keys.Control | Keys.I, "Ctrl I", (o, e) => _rsc.DisplayInfo()));
             file.DropDownItems.Add(new ToolStripSeparator());
-
-            init = new("Quit")
-            {
-                ShortcutKeys = Keys.Control | Keys.Alt | Keys.Q,
-                ShortcutKeyDisplayString = "Ctrl Alt Q",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.Quit();
-            file.DropDownItems.Add(init);
+            file.DropDownItems.Add(GenerateMenuItem("Quit", Keys.Control | Keys.Alt | Keys.Q, "Ctrl Alt Q", (o, e) => _rsc.Quit()));
 
             return file;
         }
@@ -117,33 +60,14 @@ namespace TikzGraphGen.Visualization
         {
             ToolStripMenuItem edit = new("&Edit");
 
-            ToolStripMenuItem init = new("Delete")
-            {
-                ShortcutKeys = Keys.Delete,
-                ShortcutKeyDisplayString = "Delete",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.DeleteSelected();
-            edit.DropDownItems.Add(init);
-                
-            init = new("Undo")
-            {
-                ShortcutKeys = Keys.Control | Keys.Z,
-                ShortcutKeyDisplayString = "Ctrl Z",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.Undo();
+            edit.DropDownItems.Add(GenerateMenuItem("Delete", Keys.Delete, "Delete", (o, e) => _rsc.DeleteSelected()));
+
+            ToolStripMenuItem init = GenerateMenuItem("Undo", Keys.Control | Keys.Z, "Ctrl Z", (o, e) => _rsc.Undo());
             _rsc.CanUndoStatusChanged += (b) => init.Enabled = b;
             init.Enabled = false;
             edit.DropDownItems.Add(init);
 
-            init = new("Redo")
-            {
-                ShortcutKeys = Keys.Control | Keys.Y,
-                ShortcutKeyDisplayString = "Ctrl Y",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.Redo();
+            init = GenerateMenuItem("Redo", Keys.Control | Keys.Y, "Ctrl Y", (o, e) => _rsc.Redo());
             _rsc.CanRedoStatusChanged += (b) => init.Enabled = b;
             init.Enabled = false;
             edit.DropDownItems.Add(init);
@@ -153,66 +77,19 @@ namespace TikzGraphGen.Visualization
             edit.DropDownItems.Add(init);
 
             edit.DropDownItems.Add(new ToolStripSeparator());
-
-            init = new("Cut")
-            {
-                ShortcutKeys = Keys.Control | Keys.X,
-                ShortcutKeyDisplayString = "Ctrl X",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.Cut();
-            edit.DropDownItems.Add(init);
-
-            init = new("Copy")
-            {
-                ShortcutKeys = Keys.Control | Keys.C,
-                ShortcutKeyDisplayString = "Ctrl C",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.Copy();
-            edit.DropDownItems.Add(init);
-
-            init = new("Paste")
-            {
-                ShortcutKeys = Keys.Control | Keys.V,
-                ShortcutKeyDisplayString = "Ctrl V",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.Paste();
-            edit.DropDownItems.Add(init);
-
+            edit.DropDownItems.Add(GenerateMenuItem("Cut", Keys.Control | Keys.X, "Ctrl X", (o, e) => _rsc.Cut()));
+            edit.DropDownItems.Add(GenerateMenuItem("Copy", Keys.Control | Keys.C, "Ctrl C", (o, e) => _rsc.Copy()));
+            edit.DropDownItems.Add(GenerateMenuItem("Paste", Keys.Control | Keys.V, "Ctrl V", (o, e) => _rsc.Paste()));
             edit.DropDownItems.Add(new ToolStripSeparator());
 
             init = new("Resize");
             init.Click += (o, e) => _rsc.ResizeAll();
             edit.DropDownItems.Add(init);
 
-            init = new("Set Units")
-            {
-                ShortcutKeys = Keys.Control | Keys.Alt | Keys.U,
-                ShortcutKeyDisplayString = "Ctrl Alt U",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.SetUnits();
-            edit.DropDownItems.Add(init);
-
-            init = new("Font Options") //(include apply to all option)
-            {
-                ShortcutKeys = Keys.Control | Keys.Shift | Keys.F,
-                ShortcutKeyDisplayString = "Ctrl Shift F",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.FontOptions();
-            edit.DropDownItems.Add(init);
-
-            init = new("Preferences")
-            {
-                ShortcutKeys = Keys.Control | Keys.Alt | Keys.P,
-                ShortcutKeyDisplayString = "Ctrl Alt P",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.Preferences();
-            edit.DropDownItems.Add(init);
+            edit.DropDownItems.Add(GenerateMenuItem("Set Units", Keys.Control | Keys.Alt | Keys.U, "Ctrl Alt U", (o, e) => _rsc.SetUnits()));
+            //(include apply to all option)
+            edit.DropDownItems.Add(GenerateMenuItem("Font Options", Keys.Control | Keys.Shift | Keys.F, "Ctrl Shift F", (o, e) => _rsc.FontOptions()));
+            edit.DropDownItems.Add(GenerateMenuItem("Preferences", Keys.Control | Keys.Alt | Keys.P, "Ctrl Alt P", (o, e) => _rsc.Preferences()));
 
             return edit;
         }
@@ -221,23 +98,8 @@ namespace TikzGraphGen.Visualization
         {
             ToolStripMenuItem view = new("&View");
 
-            ToolStripMenuItem init = new("Zoom In")
-            {
-                ShortcutKeys = Keys.Control | Keys.Oemplus,
-                ShortcutKeyDisplayString = "Ctrl +",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.ZoomInc();
-            view.DropDownItems.Add(init);
-
-            init = new("Zoom Out")
-            {
-                ShortcutKeys = Keys.Control | Keys.OemMinus,
-                ShortcutKeyDisplayString = "Ctrl -",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.ZoomDec();
-            view.DropDownItems.Add(init);
+            view.DropDownItems.Add(GenerateMenuItem("Zoom In", Keys.Control | Keys.Oemplus, "Ctrl +", (o, e) => _rsc.ZoomInc()));
+            view.DropDownItems.Add(GenerateMenuItem("Zoom Out", Keys.Control | Keys.OemMinus, "Ctrl -", (o, e) => _rsc.ZoomDec()));
 
             ToolStripMenuItem zoom = new("Zoom Ratio");
             zoom.DropDownItems.AddRange(new ToolStripItem[] {
@@ -265,255 +127,92 @@ namespace TikzGraphGen.Visualization
             }
             view.DropDownItems.Add(zoom);
 
-            init = new("Zoom To Fit") //Make entire graph fit on screen (if possible)
-            {
-                ShortcutKeys = Keys.Control | Keys.Shift | Keys.O,
-                ShortcutKeyDisplayString = "Ctrl Shift O",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.ZoomFit();
-            view.DropDownItems.Add(init);
-
+            //Make entire graph fit on screen (if possible)
+            view.DropDownItems.Add(GenerateMenuItem("Zoom To Fit", Keys.Control | Keys.Shift | Keys.O, "Ctrl Shift O", (o, e) => _rsc.ZoomFit()));
             view.DropDownItems.Add(new ToolStripSeparator());
-
-            init = new("Fullscreen")
-            {
-                ShortcutKeys = Keys.F11,
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.ToggleFullscreen();
-            view.DropDownItems.Add(init);
-
-            init = new("Angle Snap") //(snap to every 15%, toggle)
-            {
-                ShortcutKeys = Keys.Control | Keys.Alt | Keys.A,
-                ShortcutKeyDisplayString = "Ctrl Alt A",
-                ShowShortcutKeys = true,
-                Checked = true,
-                CheckOnClick = true
-            };
-            init.Click += (o, e) => _rsc.ToggleAngleSnap();
-            view.DropDownItems.Add(init);
-
-            init = new("Snap To Unit") //(on by default, attempts to make new lines/vertices along increments (i.e. every new vertex is 10mm apart))
-            {
-                ShortcutKeys = Keys.Control | Keys.Shift | Keys.I,
-                ShortcutKeyDisplayString = "Ctrl Shift I",
-                ShowShortcutKeys = true,
-                Checked = false,
-                CheckOnClick = true
-            };
-            init.Click += (o, e) => _rsc.ToggleUnitSnap();
-            view.DropDownItems.Add(init);
-
-            init = new("Snap To Unit Grid")
-            {
-                ShortcutKeys = Keys.Control | Keys.U,
-                ShortcutKeyDisplayString = "Ctrl Shift G",
-                ShowShortcutKeys = true,
-                Checked = false,
-                CheckOnClick = true
-            };
-            init.Click += (o, e) => _rsc.ToggleGridUnitSnap();
-            view.DropDownItems.Add(init);
-
+            view.DropDownItems.Add(GenerateMenuItem("Fullscreen", Keys.F11, "F11", (o, e) => _rsc.ToggleFullscreen()));
+            //(snap to every 15%, toggle)
+            view.DropDownItems.Add(GenerateMenuItem("Angle Snap", Keys.Control | Keys.Alt | Keys.A, "Ctrl Alt A", (o, e) => _rsc.ToggleAngleSnap(), true, true));
+            //(on by default, attempts to make new lines/vertices along increments (i.e. every new vertex is 10mm apart))
+            view.DropDownItems.Add(GenerateMenuItem("Snap To Unit", Keys.Control | Keys.Shift | Keys.I, "Ctrl Shift I", (o, e) => _rsc.ToggleUnitSnap(), false, true));
+            view.DropDownItems.Add(GenerateMenuItem("Snap To Unit Grid", Keys.Control | Keys.U, "Ctrl U", (o, e) => _rsc.ToggleGridUnitSnap(), false, true));
             view.DropDownItems.Add(new ToolStripSeparator());
-
-            init = new("Show Page Border") //(create line showing page border + margin dimensions for PDF page)
-            {
-                ShortcutKeys = Keys.Control | Keys.Alt | Keys.B,
-                ShortcutKeyDisplayString = "Ctrl Alt B",
-                ShowShortcutKeys = true,
-                Checked = false,
-                CheckOnClick = true
-            };
-            init.Click += (o, e) => _rsc.ToggleBorder();
-            view.DropDownItems.Add(init);
-
-            init = new("Show Unit Grid")
-            {
-                ShortcutKeys = Keys.Control | Keys.Shift | Keys.U,
-                ShortcutKeyDisplayString = "Ctrl Shift U",
-                ShowShortcutKeys = true,
-                Checked = false,
-                CheckOnClick = true
-            };
-            init.Click += (o, e) => _rsc.ToggleUnitGrid();
-            view.DropDownItems.Add(init);
-
-            init = new("Show Menubar")
-            {
-                ShortcutKeys = Keys.Control | Keys.Shift | Keys.M,
-                ShortcutKeyDisplayString = "Ctrl Shift M",
-                ShowShortcutKeys = true,
-                Checked = true,
-                CheckOnClick = true
-            };
-            init.Click += (o, e) => _rsc.ToggleMenu();
-            view.DropDownItems.Add(init);
-
-            init = new("Show Toolbar")
-            {
-                ShortcutKeys = Keys.Control | Keys.Shift | Keys.T,
-                ShortcutKeyDisplayString = "Ctrl Shift T",
-                ShowShortcutKeys = true,
-                Checked = true,
-                CheckOnClick = true
-            };
-            init.Click += (o, e) => _rsc.ToggleTools();
-            view.DropDownItems.Add(init);
-
+            //(create line showing page border + margin dimensions for PDF page)
+            view.DropDownItems.Add(GenerateMenuItem("Show Page Border", Keys.Control | Keys.Alt | Keys.B, "Ctrl Alt B", (o, e) => _rsc.ToggleBorder(), false, true));
+            view.DropDownItems.Add(GenerateMenuItem("Show Unit Grid", Keys.Control | Keys.Shift | Keys.U, "Ctrl Shift U", (o, e) => _rsc.ToggleUnitGrid(), false, true));
+            view.DropDownItems.Add(GenerateMenuItem("Show Menubar", Keys.Control | Keys.Shift | Keys.M, "Ctrl Shift M", (o, e) => _rsc.ToggleMenu(), true, true));
+            view.DropDownItems.Add(GenerateMenuItem("Show Toolbar", Keys.Control | Keys.Shift | Keys.T, "Ctrl Shift T", (o, e) => _rsc.ToggleTools(), true, true));
             return view;
         }
 
         private ToolStripMenuItem InitializeToolOptions()
         {
             ToolStripMenuItem tool = new("&Tools");
-            ToolStripMenuItem init = new("Vertex")
-            {
-                ShortcutKeys = Keys.Control | Keys.J,
-                ShortcutKeyDisplayString = "Ctrl J",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Vertex;
-            tool.DropDownItems.Add(init);
+            ToolStripMenuItem vertex = GenerateMenuItem("Vertex", Keys.Control | Keys.J, "Ctrl J", (o, e) => _rsc.CurrentTool = SelectedTool.Vertex);
+            _rsc.CurrentToolChanged += (s) => vertex.Checked = s.Equals(SelectedTool.Vertex);
+            tool.DropDownItems.Add(vertex);
 
-            init = new("Edge")
-            {
-                ShortcutKeys = Keys.Control | Keys.G,
-                ShortcutKeyDisplayString = "Ctrl G",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Edge;
-            tool.DropDownItems.Add(init);
+            ToolStripMenuItem edge = GenerateMenuItem("Edge", Keys.Control | Keys.G, "Ctrl G", (o, e) => _rsc.CurrentTool = SelectedTool.Edge);
+            _rsc.CurrentToolChanged += (s) => edge.Checked = s.Equals(SelectedTool.Edge);
+            tool.DropDownItems.Add(edge);
 
-            init = new("Edge Cap")
-            {
-                ShortcutKeys = Keys.Control | Keys.H,
-                ShortcutKeyDisplayString = "Ctrl H",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.EdgeCap;
-            tool.DropDownItems.Add(init);
+            ToolStripMenuItem edgeCap = GenerateMenuItem("Edge Cap", Keys.Control | Keys.H, "Ctrl H", (o, e) => _rsc.CurrentTool = SelectedTool.EdgeCap);
+            _rsc.CurrentToolChanged += (s) => edgeCap.Checked = s.Equals(SelectedTool.EdgeCap);
+            tool.DropDownItems.Add(edgeCap);
 
             tool.DropDownItems.Add(new ToolStripSeparator());
 
-            init = new("Label")
-            {
-                ShortcutKeys = Keys.Control | Keys.L,
-                ShortcutKeyDisplayString = "Ctrl L",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Label;
-            tool.DropDownItems.Add(init);
+            ToolStripMenuItem label = GenerateMenuItem("Label", Keys.Control | Keys.L, "Ctrl L", (o, e) => _rsc.CurrentTool = SelectedTool.Label);
+            _rsc.CurrentToolChanged += (s) => label.Checked = s.Equals(SelectedTool.Label);
+            tool.DropDownItems.Add(label);
 
-            init = new("Label Snap")
-            {
-                Checked = true,
-                CheckOnClick = true,
-                ShortcutKeys = Keys.Control | Keys.Shift | Keys.L,
-                ShortcutKeyDisplayString = "Ctrl Shift L",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.ToggleLabelEdgeSnap();
-            tool.DropDownItems.Add(init);
+            tool.DropDownItems.Add(GenerateMenuItem("Label Snap", Keys.Control | Keys.Shift | Keys.L, "Ctrl Shift L", (o, e) => _rsc.ToggleLabelEdgeSnap(), true, true));
+            tool.DropDownItems.Add(new ToolStripSeparator());
+
+            ToolStripMenuItem eraser = GenerateMenuItem("Eraser", Keys.Control | Keys.B, "Ctrl B", (o, e) => _rsc.CurrentTool = SelectedTool.Eraser);
+            _rsc.CurrentToolChanged += (s) => eraser.Checked = s.Equals(SelectedTool.Eraser);
+            tool.DropDownItems.Add(eraser);
+
+            //TODO: Expand to be several menuitems with each transform subtool (each with a shortcut too)
+            ToolStripMenuItem transform = GenerateMenuItem("Transform", Keys.Control | Keys.N, "Ctrl N", (o, e) => _rsc.CurrentTool = SelectedTool.Transform);
+            _rsc.CurrentToolChanged += (s) => transform.Checked = s.Equals(SelectedTool.Transform);
+            tool.DropDownItems.Add(transform);
+
+            ToolStripMenuItem shape = GenerateMenuItem("Shape", Keys.Control | Keys.P, "Ctrl P", (o, e) => _rsc.CurrentTool = SelectedTool.Shape);
+            _rsc.CurrentToolChanged += (s) => shape.Checked = s.Equals(SelectedTool.Shape);
+            tool.DropDownItems.Add(shape);
+
+            tool.DropDownItems.Add(new ToolStripMenuItem("Shape Options"));
+            tool.DropDownItems.Add(new ToolStripSeparator());
+
+            ToolStripMenuItem select = GenerateMenuItem("Select", Keys.Control | Keys.E, "Ctrl E", (o, e) => _rsc.CurrentTool = SelectedTool.Select);
+            _rsc.CurrentToolChanged += (s) => select.Checked = s.Equals(SelectedTool.Select);
+            tool.DropDownItems.Add(select);
+
+            ToolStripMenuItem areaSelect = GenerateMenuItem("Area Select", Keys.Control | Keys.A, "Ctrl A", (o, e) => _rsc.CurrentTool = SelectedTool.AreaSelect);
+            _rsc.CurrentToolChanged += (s) => areaSelect.Checked = s.Equals(SelectedTool.AreaSelect);
+            tool.DropDownItems.Add(areaSelect);
+
+            tool.DropDownItems.Add(GenerateMenuItem("Select All", Keys.Control | Keys.Shift | Keys.A, "Ctrl Shift A", (o, e) => _rsc.SelectAll()));
+
+            ToolStripMenuItem lasso = GenerateMenuItem("Lasso", Keys.Control | Keys.Q, "Ctrl Q", (o, e) => _rsc.CurrentTool = SelectedTool.Lasso);
+            _rsc.CurrentToolChanged += (s) => lasso.Checked = s.Equals(SelectedTool.Lasso);
+            tool.DropDownItems.Add(lasso);
 
             tool.DropDownItems.Add(new ToolStripSeparator());
 
-            init = new("Eraser")
-            {
-                ShortcutKeys = Keys.Control | Keys.B,
-                ShortcutKeyDisplayString = "Ctrl B",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Eraser;
-            tool.DropDownItems.Add(init);
+            ToolStripMenuItem weight = GenerateMenuItem("Weight", Keys.Control | Keys.W, "Ctrl W", (o, e) => _rsc.CurrentTool = SelectedTool.Weight);
+            _rsc.CurrentToolChanged += (s) => weight.Checked = s.Equals(SelectedTool.Merge);
+            tool.DropDownItems.Add(weight);
 
-            init = new("Transform") //TODO: Expand to be several menuitems with each transform subtool (each with a shortcut too)
-            {
-                ShortcutKeys = Keys.Control | Keys.N,
-                ShortcutKeyDisplayString = "Ctrl N",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Transform;
-            tool.DropDownItems.Add(init);
-
-            init = new("Shape")
-            {
-                ShortcutKeys = Keys.Control | Keys.P,
-                ShortcutKeyDisplayString = "Ctrl P",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Shape;
-            tool.DropDownItems.Add(init);
-
-            init = new("Shape Options");
-            tool.DropDownItems.Add(init);
-
+            tool.DropDownItems.Add(new ToolStripMenuItem("Clear All Weights"));
             tool.DropDownItems.Add(new ToolStripSeparator());
 
-            init = new("Select")
-            {
-                ShortcutKeys = Keys.Control | Keys.E,
-                ShortcutKeyDisplayString = "Ctrl E",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Select;
-            tool.DropDownItems.Add(init);
+            ToolStripMenuItem tracker = GenerateMenuItem("Tracker", Keys.Control | Keys.T, "Ctrl T", (o, e) => _rsc.CurrentTool = SelectedTool.Tracker);
+            _rsc.CurrentToolChanged += (s) => tracker.Checked = s.Equals(SelectedTool.Merge);
+            tool.DropDownItems.Add(tracker);
 
-            init = new("Area Select")
-            {
-                ShortcutKeys = Keys.Control | Keys.A,
-                ShortcutKeyDisplayString = "Ctrl A",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.AreaSelect;
-            tool.DropDownItems.Add(init);
-
-            init = new("Select All")
-            {
-                ShortcutKeys = Keys.Control | Keys.Shift | Keys.A,
-                ShortcutKeyDisplayString = "Ctrl Shift A",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.SelectAll();
-            tool.DropDownItems.Add(init);
-
-            init = new("Lasso")
-            {
-                ShortcutKeys = Keys.Control | Keys.Q,
-                ShortcutKeyDisplayString = "Ctrl Q",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Lasso;
-            tool.DropDownItems.Add(init);
-
-            tool.DropDownItems.Add(new ToolStripSeparator());
-
-            init = new("Weight")
-            {
-                ShortcutKeys = Keys.Control | Keys.W,
-                ShortcutKeyDisplayString = "Ctrl W",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Weight;
-            tool.DropDownItems.Add(init);
-
-            tool.DropDownItems.Add(init); init = new("Clear All Weights");
-            tool.DropDownItems.Add(init);
-
-            tool.DropDownItems.Add(new ToolStripSeparator());
-
-            init = new("Tracker")
-            {
-                ShortcutKeys = Keys.Control | Keys.T,
-                ShortcutKeyDisplayString = "Ctrl T",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Tracker;
-            tool.DropDownItems.Add(init);
-
-            init = new("Tracking Categories");
+            ToolStripMenuItem init = new("Tracking Categories");
             init.DropDownItems.AddRange(new ToolStripItem[] { //TODO: Add shortcuts for tracker subtools
                 new ToolStripMenuItem("Vertex"),
                 new ToolStripMenuItem("Edge"),
@@ -531,81 +230,14 @@ namespace TikzGraphGen.Visualization
             tool.DropDownItems.Add(init);
 
             tool.DropDownItems.Add(new ToolStripSeparator());
+            //(G \ e)
+            ToolStripMenuItem merge = GenerateMenuItem("Merge", Keys.Control | Keys.M, "Ctrl M", (o, e) => _rsc.CurrentTool = SelectedTool.Merge);
+            _rsc.CurrentToolChanged += (s) => merge.Checked = s.Equals(SelectedTool.Merge);
+            tool.DropDownItems.Add(merge);
 
-            init = new("Merge") //(G \ e)
-            {
-                ShortcutKeys = Keys.Control | Keys.M,
-                ShortcutKeyDisplayString = "Ctrl M",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Merge;
-            tool.DropDownItems.Add(init);
-
-            init = new("Split")
-            {
-                ShortcutKeys = Keys.Control | Keys.K,
-                ShortcutKeyDisplayString = "Ctrl K",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.CurrentTool = SelectedTool.Split;
-            tool.DropDownItems.Add(init);
-
-            _rsc.CurrentToolChanged += (SelectedTool cur) =>
-            {
-                foreach (ToolStripItem i in tool.DropDownItems)
-                {
-                    if(i is ToolStripMenuItem item)
-                        item.Checked = false;
-                }
-
-                switch (cur)
-                {
-                    case SelectedTool.Vertex:
-                        ((ToolStripMenuItem)tool.DropDownItems[0]).Checked = true;
-                        break;
-                    case SelectedTool.Edge:
-                        ((ToolStripMenuItem)tool.DropDownItems[1]).Checked = true;
-                        break;
-                    case SelectedTool.EdgeCap:
-                        ((ToolStripMenuItem)tool.DropDownItems[2]).Checked = true;
-                        break;
-                    case SelectedTool.Label:
-                        ((ToolStripMenuItem)tool.DropDownItems[4]).Checked = true;
-                        break;
-                    case SelectedTool.Eraser:
-                        ((ToolStripMenuItem)tool.DropDownItems[7]).Checked = true;
-                        break;
-                    case SelectedTool.Transform:
-                        ((ToolStripMenuItem)tool.DropDownItems[8]).Checked = true;
-                        break;
-                    case SelectedTool.Shape:
-                        ((ToolStripMenuItem)tool.DropDownItems[9]).Checked = true;
-                        break;
-                    case SelectedTool.Select:
-                        ((ToolStripMenuItem)tool.DropDownItems[11]).Checked = true;
-                        break;
-                    case SelectedTool.AreaSelect:
-                        ((ToolStripMenuItem)tool.DropDownItems[12]).Checked = true;
-                        break;
-                    case SelectedTool.Lasso:
-                        ((ToolStripMenuItem)tool.DropDownItems[14]).Checked = true;
-                        break;
-                    case SelectedTool.Weight:
-                        ((ToolStripMenuItem)tool.DropDownItems[16]).Checked = true;
-                        break;
-                    case SelectedTool.Tracker:
-                        ((ToolStripMenuItem)tool.DropDownItems[19]).Checked = true;
-                        break;
-                    case SelectedTool.Merge:
-                        ((ToolStripMenuItem)tool.DropDownItems[20]).Checked = true;
-                        break;
-                    case SelectedTool.Split:
-                        ((ToolStripMenuItem)tool.DropDownItems[23]).Checked = true;
-                        break;
-                    default:
-                        throw new NotImplementedException();
-                }
-            };
+            ToolStripMenuItem split = GenerateMenuItem("Split", Keys.Control | Keys.K, "Ctrl K", (o, e) => _rsc.CurrentTool = SelectedTool.Split);
+            _rsc.CurrentToolChanged += (s) => split.Checked = s.Equals(SelectedTool.Split);
+            tool.DropDownItems.Add(split);
 
             return tool;
         }
@@ -678,24 +310,10 @@ namespace TikzGraphGen.Visualization
         private ToolStripMenuItem InitializeHelpOptions()
         {
             ToolStripMenuItem help = new("&Help");
-            ToolStripMenuItem init = new("Guide")
-            {
-                ShortcutKeys = Keys.F1,
-                ShortcutKeyDisplayString = "F1",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.Guide();
-            help.DropDownItems.Add(init);
-            init = new("Context Help")
-            {
-                ShortcutKeys = Keys.Shift | Keys.F1,
-                ShortcutKeyDisplayString = "Shift F1",
-                ShowShortcutKeys = true
-            };
-            init.Click += (o, e) => _rsc.ContextHelp();
-            help.DropDownItems.Add(init);
+            help.DropDownItems.Add(GenerateMenuItem("Guide", Keys.F1, "F1", (o, e) => _rsc.Guide()));
+            help.DropDownItems.Add(GenerateMenuItem("Context Help", Keys.Shift | Keys.F1, "Shift F1", (o, e) => _rsc.ContextHelp()));
 
-            init = new("About");
+            ToolStripMenuItem init = new("About");
             init.Click += (o, e) => _rsc.About();
             help.DropDownItems.Add("About");
 
@@ -710,6 +328,21 @@ namespace TikzGraphGen.Visualization
                 foreach(ToolStripItem i in m.DropDownItems)
                     SetSubmenuWidth(i, width);
             }
+        }
+
+        private static ToolStripMenuItem GenerateMenuItem(string text, Keys shortcut, string shortcutText, EventHandler clickEvent, bool check = false, bool checkOnClick = false)
+        {
+            ToolStripMenuItem output = new(text)
+            {
+                ShortcutKeys = shortcut,
+                ShortcutKeyDisplayString = shortcutText,
+                ShowShortcutKeys = true,
+                Checked = check,
+                CheckOnClick = checkOnClick
+            };
+            output.Click += clickEvent;
+
+            return output;
         }
     }
 }

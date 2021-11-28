@@ -27,6 +27,14 @@ namespace TikzGraphGen
             _source = s;
             _destination = d;
         }
+        public Edge(EdgeToolInfo edgeSettings, EdgeCapToolInfo sourceCapSettings, EdgeCapToolInfo destinationCapSettings, Vertex s, Vertex d)
+        {
+            Style = new EdgeLineStyle(edgeSettings, sourceCapSettings, destinationCapSettings);
+            Label = null;
+            Value = 0;
+            _source = s;
+            _destination = d;
+        }
         public Edge(EdgeToolInfo edgeSettings, EdgeCapToolInfo capSettings, Vertex s, Vertex d, FreeLabel label)
         {
             Style = new EdgeLineStyle(edgeSettings, capSettings, capSettings);

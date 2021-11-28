@@ -8,9 +8,8 @@ using TikzGraphGen.GraphData;
 using static TikzGraphGen.ToolSettingDictionary;
 
 //Next goals:
-//Center graph with zoom fit so that (x or y) that is smaller percentage of editor screen is centered
-
-//Implement Merge
+//Make it so that dragging when clicking the second vertex for the merge tool causes the merged vertex to be created at the current mouse position rather than at the midpoint
+//Split this file's functions into three files. One stays the same, and handles setting up the window, one is DrawingWindowRenderer, and one is GraphInteractionInterface
 //Implement Split
 //Implement labels for editing vertices or creating labels in space (specially modified vertices with tag to not be picked up in algorithms
 //Implement label edge snap (find mid point of edge (create function that is overriden in bent/curved edge) and find instantaneous angle at that point (also implement a function)
@@ -53,6 +52,8 @@ namespace TikzGraphGen.Visualization
         public static readonly float HIGHLIGHT_WIDTH = 3f;
         public static readonly float MAX_ANGLE_LINK = 4.0f;
         public static readonly SizeF PAGE_SIZE = new(UnitConverter.InToPx(8.5f), UnitConverter.InToPx(11f));
+
+        public static readonly Point OFF_SCREEN = new Point(-1, -1);
 
         public static readonly ToolSettingDictionary DEFAULT_GRAPH_SETTINGS = new();
 
@@ -121,15 +122,14 @@ namespace TikzGraphGen.Visualization
             MouseDown += TikzDrawingWindow_MouseDown;
             MouseMove += TikzDrawingWindow_MouseMove;
             MouseUp += TikzDrawingWindow_MouseUp;
-
-            _rsc.CurrentToolChanged += (t) =>
+            MouseLeave += (o, e) =>
             {
-                _firstVertex = null;
-                _isDragging = false;
-                _mouseDownPos = null;
-                _lassoPts.Clear();
+                _mouseDragPos = OFF_SCREEN;
+                ToolDataReset();
                 Refresh();
             };
+
+            _rsc.CurrentToolChanged += (t) => ToolDataReset();
             _rsc.Undo += () => _graph = Graph.Undo(_graph);
             _rsc.Redo += () => _graph = Graph.Redo(_graph);
             _rsc.DeleteSelected += () => { if(_selectedSubgraph != null) _graph.DeleteSubgraph(_selectedSubgraph); _selectedSubgraph = null; Refresh(); };
@@ -179,14 +179,18 @@ namespace TikzGraphGen.Visualization
             throw new NotImplementedException();
         }
 
-        public void SelectSubArea(Rectangle area)
+        public Coord MouseToCoord(Coord mousePos)
         {
             throw new NotImplementedException();
         }
 
-        public Coord MouseToCoord(Coord mousePos)
+        public void ToolDataReset()
         {
-            throw new NotImplementedException();
+            _firstVertex = null;
+            _isDragging = false;
+            _mouseDownPos = null;
+            _lassoPts.Clear();
+            Refresh();
         }
 
         public void ZoomIn()
@@ -303,6 +307,8 @@ namespace TikzGraphGen.Visualization
                 foreach (Vertex v in selectedSub.ViewVertices())
                     DrawHighlightedVertex(e.Graphics, v, v.Offset - _visibleCorner);
             }
+            if(_rsc.CurrentTool.Equals(SelectedTool.Merge) && _firstVertex != null)
+                DrawHighlightedVertex(e.Graphics, _firstVertex, _firstVertex.Offset - _visibleCorner);
 
             if (!sub.IsEmpty())
                 foreach (Edge eg in sub.ViewEdges())
@@ -316,7 +322,8 @@ namespace TikzGraphGen.Visualization
 
             PostVertexPaint(e);
             e.Graphics.ResetTransform();
-            e.Graphics.DrawString($"{_variableZoom}", new Font(FontFamily.GenericMonospace, 20), new SolidBrush(Color.Black), new PointF());
+            e.Graphics.DrawString($"{_variableZoom}", new Font(FontFamily.GenericMonospace, 20), new SolidBrush(Color.Black), new PointF(0, 0));
+            e.Graphics.DrawString($"{_mouseDragPos}", new Font(FontFamily.GenericMonospace, 20), new SolidBrush(Color.Black), new PointF(0, 30));
         }
 
         private void PreVertexPaint(PaintEventArgs e)
@@ -344,6 +351,7 @@ namespace TikzGraphGen.Visualization
                 case SelectedTool.AreaSelect:
                 case SelectedTool.Lasso:
                 case SelectedTool.Shape:
+                case SelectedTool.Merge:
                     break;
                 default:
                     throw new NotImplementedException();
@@ -354,6 +362,9 @@ namespace TikzGraphGen.Visualization
             switch (_rsc.CurrentTool)
             {
                 case SelectedTool.Vertex:
+                    if (_mouseDragPos.Equals(OFF_SCREEN))
+                        break;
+
                     Coord mouseGraphPos = (Coord)_mouseDragPos / _variableZoom + _visibleCorner;
                     Coord aligned = FindVertexRepositioning(mouseGraphPos) - _visibleCorner;
 
@@ -362,6 +373,7 @@ namespace TikzGraphGen.Visualization
                     break;
                 case SelectedTool.Edge:
                 case SelectedTool.EdgeCap:
+                case SelectedTool.Merge:
                     break;
                 case SelectedTool.Eraser:
                     if (_isDragging)
@@ -675,6 +687,40 @@ namespace TikzGraphGen.Visualization
                             _lassoPts.Add(mousePos);
                     }
                     break;
+                case SelectedTool.Merge:
+                    if (_firstVertex == null)
+                        _firstVertex = GetVerticesInCircle(_graph, mousePos).FirstOrDefault();
+                    else
+                    {
+                        Vertex _secondVertex = GetVerticesInCircle(_graph, mousePos).FirstOrDefault();
+                        if (_firstVertex != null && _secondVertex != null && _firstVertex != _secondVertex)
+                        {
+                            _graph.RemoveVertex(_firstVertex);
+                            _graph.RemoveVertex(_secondVertex);
+                            Vertex result = _graph.CreateVertex(_firstVertex.Offset + (_secondVertex.Offset - _firstVertex.Offset) / 2, _firstVertex.Style);
+                            foreach(Edge ed in _firstVertex.ViewEdges())
+                            {
+                                if (ed.ViewDestination().Equals(_secondVertex) || ed.ViewSource().Equals(_secondVertex))
+                                    break;
+                                else if (ed.ViewDestination().Equals(_firstVertex))
+                                    _graph.CreateEdge(ed.ViewSource(), result, ed.Style.LineInfo, ed.Style.SDirectionCap, ed.Style.DDirectionCap);
+                                else
+                                    _graph.CreateEdge(result, ed.ViewDestination(), ed.Style.LineInfo, ed.Style.SDirectionCap, ed.Style.DDirectionCap);
+                            }
+                            foreach (Edge ed in _secondVertex.ViewEdges())
+                            {
+                                if (ed.ViewDestination().Equals(_firstVertex) || ed.ViewSource().Equals(_firstVertex))
+                                    break;
+                                else if (ed.ViewDestination().Equals(_secondVertex))
+                                    _graph.CreateEdge(ed.ViewSource(), result, ed.Style.LineInfo, ed.Style.SDirectionCap, ed.Style.DDirectionCap);
+                                else
+                                    _graph.CreateEdge(result, ed.ViewDestination(), ed.Style.LineInfo, ed.Style.SDirectionCap, ed.Style.DDirectionCap);
+                            }
+                        }
+
+                        _firstVertex = null;
+                    }
+                    break;
                 default:
                     throw new NotImplementedException();
             }
@@ -748,6 +794,7 @@ namespace TikzGraphGen.Visualization
                 case SelectedTool.EdgeCap:
                 case SelectedTool.AreaSelect:
                 case SelectedTool.Shape:
+                case SelectedTool.Merge:
                     break;
                 case SelectedTool.Edge:
                     _firstVertex = GetVerticesInCircle(_graph, _visibleCorner + (Coord)_mouseDownPos / _variableZoom).FirstOrDefault();
@@ -802,6 +849,7 @@ namespace TikzGraphGen.Visualization
                 case SelectedTool.Vertex:
                 case SelectedTool.EdgeCap:
                 case SelectedTool.Eraser:
+                case SelectedTool.Merge:
                     break;
                 case SelectedTool.Edge:
                     Vertex _secondVertex = GetVerticesInCircle(_graph, _visibleCorner + e.Location).FirstOrDefault();

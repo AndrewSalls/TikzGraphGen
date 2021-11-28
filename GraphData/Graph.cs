@@ -61,6 +61,16 @@ namespace TikzGraphGen
 
             return output;
         }
+        public Edge CreateEdge(Vertex from, Vertex to, EdgeToolInfo edgeSettings, EdgeCapToolInfo sourceCapSettings, EdgeCapToolInfo destinationCapSettings, bool undoing = false)
+        {
+            Edge output = new(edgeSettings, sourceCapSettings, destinationCapSettings, from, to);
+            _edges.Add(output);
+            from.Connect(output);
+            to.Connect(output);
+            output.Connect(from, to);
+
+            return output;
+        }
         public void AddEdge(Vertex from, Vertex to, Edge toAdd, bool undoing = false)
         {
             _edges.Add(toAdd);
