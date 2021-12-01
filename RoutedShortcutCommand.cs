@@ -87,6 +87,8 @@ namespace TikzGraphGen
         //which gets the position of the mouse when clicking and opens the guide to the relevent information of the object at those coordinates in the rest of TikzWindow
         public GeneralCommand About; //
 
+        public GeneralCommand RefreshWindow; //
+
         public static string SavePrompt() //Retry = save, Abort = continue, Ignore = cancel
         {
             TaskDialogPage display = new()
