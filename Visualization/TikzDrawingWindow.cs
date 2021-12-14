@@ -4,9 +4,6 @@ using System.Windows.Forms;
 using TikzGraphGen.GraphData;
 
 //Next goals:
-//Make it so that dragging when clicking the second vertex for the merge tool causes the merged vertex to be created at the current mouse position rather than at the midpoint
-//Split this file's functions into three files. One stays the same, and handles setting up the window, one is DrawingWindowRenderer, and one is GraphInteractionInterface
-//Implement Split
 //Implement labels for editing vertices or creating labels in space (specially modified vertices with tag to not be picked up in algorithms
 //Implement label edge snap (find mid point of edge (create function that is overriden in bent/curved edge) and find instantaneous angle at that point (also implement a function)
 //                                then, check if mouse is above or below the point. Add text at point above or below correspondingly, spaced away along perpendicular line by pixel amount determined by LabelToolInfo's edgeSpacing property
@@ -16,14 +13,15 @@ using TikzGraphGen.GraphData;
 //Implement Weight
 //Implement Tracker
 //Implement redo/undo
+//Implement Split
 //Implement all of the Transform tools
 //Make zooming in/out with shortcuts keep position under cursor at same coordinate
+//Add fill tool for drawing planar colorizations (and maybe vertex colorizations): Add planar colorizations to analysis
 //Add setting to determine space to leave around ZoomFit on screen (e.g. setting of 1 inch means there is a 1 inch border of unfilled screenspace around the boundary of the graph)
 //Begin implementing some algorithms
 
 namespace TikzGraphGen.Visualization
 {
-    //TODO: Add fill tool for drawing planar colorizations (and maybe vertex colorizations): Add planar colorizations to analysis
     public class TikzDrawingWindow : Form
     {
         public enum SelectedTool
@@ -255,10 +253,16 @@ namespace TikzGraphGen.Visualization
                 angle = MathF.Max(0, MathF.Min(Round(angle, i.AngleSnapAmt), 2 * MathF.PI));
                 drawPos = new(origin.X + MathF.Cos(angle) * offset, origin.Y + MathF.Sin(angle) * offset);
             }
-            if (i.SnapToUnitGrid)
-                drawPos = new(Round(drawPos.X + i.Corner.X, DrawingWindowRenderer.UNIT_SIZE) - i.Corner.X, Round(drawPos.Y + i.Corner.Y, DrawingWindowRenderer.UNIT_SIZE) - i.Corner.Y);
 
-                return drawPos;
+            if (i.SnapToUnitGrid)
+            {
+                System.Diagnostics.Debug.WriteLine("Units : " + DrawingWindowRenderer.UNIT_SIZE);
+                System.Diagnostics.Debug.WriteLine(drawPos + " : original");
+                drawPos = new(Round(drawPos.X, DrawingWindowRenderer.UNIT_SIZE), Round(drawPos.Y, DrawingWindowRenderer.UNIT_SIZE));
+                System.Diagnostics.Debug.WriteLine(drawPos + " : shifted");
+                System.Diagnostics.Debug.WriteLine(i.Corner + " : offset\n");
+            }
+            return drawPos;
         }
 
         /**

@@ -19,7 +19,7 @@ namespace TikzGraphGen.Visualization
         public static readonly float UNIT_GRID_GUIDE_WIDTH = 1f;
         public static readonly float HIGHLIGHT_WIDTH = 3f;
         public static readonly SizeF PAGE_SIZE = new(UnitConverter.InToPx(8.5f), UnitConverter.InToPx(11f));
-        public static readonly float UNIT_SIZE = UnitConverter.ST_MM * 10; //1 cm, a common Tikz unit
+        public static readonly float UNIT_SIZE = 30;//UnitConverter.ST_MM * 10; //1 cm, a common Tikz unit
 
         private readonly ToolActionData _info;
 
@@ -27,15 +27,16 @@ namespace TikzGraphGen.Visualization
 
         public void PaintScreen(PaintEventArgs e, float zoomAmt, Graph graph, Rectangle screen, SelectedTool currentTool, ToolSettingDictionary toolInfo)
         {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             Graph sub = graph.GetSubgraphTouchingPolygon(new() { _info.Corner, new(_info.Corner.X + screen.Width / zoomAmt, _info.Corner.Y),
                                                                   _info.Corner + new Coord(screen.Width, screen.Height) / zoomAmt, new(_info.Corner.X, _info.Corner.Y + screen.Height / zoomAmt) });
 
             if (_info.DrawUnitGrid)
             {
-                for (float x = _info.Corner.X - _info.Corner.X % UNIT_SIZE; x <= _info.Corner.X + screen.X / zoomAmt; x += UNIT_SIZE)
-                    e.Graphics.DrawLine(new Pen(new SolidBrush(UNIT_GRID_GUIDE_COLOR), UNIT_GRID_GUIDE_WIDTH), x - _info.Corner.X, 0, x - _info.Corner.X, screen.Y / zoomAmt);
-                for (float y = _info.Corner.Y - _info.Corner.Y % UNIT_SIZE; y <= _info.Corner.Y + screen.Y / zoomAmt; y += UNIT_SIZE)
-                    e.Graphics.DrawLine(new Pen(new SolidBrush(UNIT_GRID_GUIDE_COLOR), UNIT_GRID_GUIDE_WIDTH), 0, y - _info.Corner.Y, screen.X / zoomAmt, y - _info.Corner.Y);
+                for (float x = _info.Corner.X - _info.Corner.X % UNIT_SIZE; x <= _info.Corner.X + screen.Width / zoomAmt; x += UNIT_SIZE)
+                    e.Graphics.DrawLine(new Pen(new SolidBrush(UNIT_GRID_GUIDE_COLOR), UNIT_GRID_GUIDE_WIDTH), x - _info.Corner.X, 0, x - _info.Corner.X, screen.Height / zoomAmt);
+                for (float y = _info.Corner.Y - _info.Corner.Y % UNIT_SIZE; y <= _info.Corner.Y + screen.Height / zoomAmt; y += UNIT_SIZE)
+                    e.Graphics.DrawLine(new Pen(new SolidBrush(UNIT_GRID_GUIDE_COLOR), UNIT_GRID_GUIDE_WIDTH), 0, y - _info.Corner.Y, screen.Width / zoomAmt, y - _info.Corner.Y);
             }
             if(_info.DrawBorder) //I'm too lazy to just draw the line segments that are actually visible
                 e.Graphics.DrawRectangle(new Pen(new SolidBrush(BORDER_GUIDE_COLOR), BORDER_GUIDE_WIDTH), -_info.Corner.X, -_info.Corner.Y, PAGE_SIZE.Width, PAGE_SIZE.Height);
@@ -103,6 +104,10 @@ namespace TikzGraphGen.Visualization
         {
             switch (currentTool)
             {
+                case SelectedTool.Merge:
+                    if (_info.FirstVertex == null || !_info.Dragging)
+                        break;
+                    goto case SelectedTool.Vertex; //I hate C#
                 case SelectedTool.Vertex:
                     if (_info.MouseDrag.Equals(OFF_SCREEN))
                         break;
@@ -115,7 +120,6 @@ namespace TikzGraphGen.Visualization
                     break;
                 case SelectedTool.Edge:
                 case SelectedTool.EdgeCap:
-                case SelectedTool.Merge:
                     break;
                 case SelectedTool.Eraser:
                     if (_info.Dragging)
@@ -184,7 +188,7 @@ namespace TikzGraphGen.Visualization
                     throw new NotImplementedException();
             }
 
-            if (currentTool.Equals(SelectedTool.Vertex) || (currentTool.Equals(SelectedTool.Shape) && _info.MouseDown != null))
+            if (currentTool.Equals(SelectedTool.Vertex) || (currentTool.Equals(SelectedTool.Shape) && _info.MouseDown != null) || (currentTool.Equals(SelectedTool.Merge) && _info.FirstVertex != null && _info.Dragging))
             {
                 Coord mouseGraphPos = _info.Corner + (Coord)_info.MouseDrag / zoomAmt;
                 Coord center;

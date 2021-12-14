@@ -85,6 +85,9 @@ namespace TikzGraphGen.Visualization
                     }
                     break;
                 case SelectedTool.Merge:
+                    if (_info.Dragging)
+                        break;
+
                     if (_info.FirstVertex == null)
                         _info.FirstVertex = GetVerticesInCircle(graph, mousePos).FirstOrDefault();
                     else
@@ -92,27 +95,9 @@ namespace TikzGraphGen.Visualization
                         Vertex _secondVertex = GetVerticesInCircle(graph, mousePos).FirstOrDefault();
                         if (_info.FirstVertex != null && _secondVertex != null && _info.FirstVertex != _secondVertex)
                         {
+                            Merge(_info.FirstVertex, _secondVertex, _info.FirstVertex.Offset + (_secondVertex.Offset - _info.FirstVertex.Offset) / 2, graph);
                             graph.RemoveVertex(_info.FirstVertex);
                             graph.RemoveVertex(_secondVertex);
-                            Vertex result = graph.CreateVertex(_info.FirstVertex.Offset + (_secondVertex.Offset - _info.FirstVertex.Offset) / 2, _info.FirstVertex.Style);
-                            foreach (Edge ed in _info.FirstVertex.ViewEdges())
-                            {
-                                if (ed.ViewDestination().Equals(_secondVertex) || ed.ViewSource().Equals(_secondVertex))
-                                    break;
-                                else if (ed.ViewDestination().Equals(_info.FirstVertex))
-                                    graph.CreateEdge(ed.ViewSource(), result, ed.Style.LineInfo, ed.Style.SDirectionCap, ed.Style.DDirectionCap);
-                                else
-                                    graph.CreateEdge(result, ed.ViewDestination(), ed.Style.LineInfo, ed.Style.SDirectionCap, ed.Style.DDirectionCap);
-                            }
-                            foreach (Edge ed in _secondVertex.ViewEdges())
-                            {
-                                if (ed.ViewDestination().Equals(_info.FirstVertex) || ed.ViewSource().Equals(_info.FirstVertex))
-                                    break;
-                                else if (ed.ViewDestination().Equals(_secondVertex))
-                                    graph.CreateEdge(ed.ViewSource(), result, ed.Style.LineInfo, ed.Style.SDirectionCap, ed.Style.DDirectionCap);
-                                else
-                                    graph.CreateEdge(result, ed.ViewDestination(), ed.Style.LineInfo, ed.Style.SDirectionCap, ed.Style.DDirectionCap);
-                            }
                         }
 
                         _info.FirstVertex = null;
@@ -205,13 +190,12 @@ namespace TikzGraphGen.Visualization
                 case SelectedTool.Vertex:
                 case SelectedTool.EdgeCap:
                 case SelectedTool.Eraser:
-                case SelectedTool.Merge:
                     break;
                 case SelectedTool.Edge:
-                    Vertex _secondVertex = GetVerticesInCircle(graph, _info.Corner + e.Location).FirstOrDefault();
+                    Vertex secondVertex = GetVerticesInCircle(graph, _info.Corner + e.Location).FirstOrDefault();
 
-                    if (_info.FirstVertex != null && _secondVertex != null && _info.Dragging && _info.FirstVertex != _secondVertex && !_info.FirstVertex.IsAdjacentTo(_secondVertex)) //TODO: Make support loops & multiedges later (give warning or automatically curve lines) (A -> A)
-                        graph.CreateEdge(_info.FirstVertex, _secondVertex, toolInfo.EdgeInfo, toolInfo.EdgeCapInfo);
+                    if (_info.FirstVertex != null && secondVertex != null && _info.Dragging && _info.FirstVertex != secondVertex && !_info.FirstVertex.IsAdjacentTo(secondVertex)) //TODO: Make support loops & multiedges later (give warning or automatically curve lines) (A -> A)
+                        graph.CreateEdge(_info.FirstVertex, secondVertex, toolInfo.EdgeInfo, toolInfo.EdgeCapInfo);
 
                     _modifyToolPermission(true);
                     break;
@@ -263,6 +247,20 @@ namespace TikzGraphGen.Visualization
                     }
                     _modifyToolPermission(true);
                     break;
+                case SelectedTool.Merge:
+                    if (_info.Dragging && _info.FirstVertex != null)
+                    {
+                        Vertex second = GetVerticesInCircle(graph, _info.Corner + ((Coord)(Point)_info.MouseDown) / zoomAmt).FirstOrDefault();
+                        if (_info.FirstVertex != null && second != null && _info.FirstVertex != second)
+                        {
+                            Merge(_info.FirstVertex, second, _info.Corner + ((Coord)_info.MouseDrag) / zoomAmt, graph);
+                            graph.RemoveVertex(_info.FirstVertex);
+                            graph.RemoveVertex(second);
+                        }
+
+                        _info.FirstVertex = null;
+                    }
+                    break;
                 default:
                     throw new NotImplementedException();
             }
@@ -281,6 +279,29 @@ namespace TikzGraphGen.Visualization
                    c.Y >= v.Offset.Y - v.Style.Radius - (v.Style.YRadius / 2) &&
                    c.X <= v.Offset.X + v.Style.Radius + (v.Style.XRadius / 2) &&
                    c.Y <= v.Offset.Y + v.Style.Radius + (v.Style.XRadius / 2));
+        }
+
+        private void Merge(Vertex v1, Vertex v2, Coord mergeAt, Graph graph)
+        {
+            Vertex result = graph.CreateVertex(FindVertexRepositioning(graph, _info, mergeAt), v1.Style);
+            foreach (Edge ed in v1.ViewEdges())
+            {
+                if (ed.ViewDestination().Equals(v2) || ed.ViewSource().Equals(v2))
+                    break;
+                else if (ed.ViewDestination().Equals(v1))
+                    graph.CreateEdge(ed.ViewSource(), result, ed.Style.LineInfo, ed.Style.SDirectionCap, ed.Style.DDirectionCap);
+                else
+                    graph.CreateEdge(result, ed.ViewDestination(), ed.Style.LineInfo, ed.Style.SDirectionCap, ed.Style.DDirectionCap);
+            }
+            foreach (Edge ed in v2.ViewEdges())
+            {
+                if (ed.ViewDestination().Equals(v1) || ed.ViewSource().Equals(v1))
+                    break;
+                else if (ed.ViewDestination().Equals(v2))
+                    graph.CreateEdge(ed.ViewSource(), result, ed.Style.LineInfo, ed.Style.SDirectionCap, ed.Style.DDirectionCap);
+                else
+                    graph.CreateEdge(result, ed.ViewDestination(), ed.Style.LineInfo, ed.Style.SDirectionCap, ed.Style.DDirectionCap);
+            }
         }
     }
 }
